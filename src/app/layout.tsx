@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Client Portal — Courtside AI",
+  title: "Courtside AI - Client Portal",
   description: "AI voice agent management portal by Courtside AI",
   icons: {
     icon: [
@@ -19,14 +19,14 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "Client Portal — Courtside AI",
+    title: "Courtside AI - Client Portal",
     description: "AI voice agent management portal by Courtside AI",
     siteName: "Courtside AI",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Client Portal — Courtside AI",
+    title: "Courtside AI - Client Portal",
     description: "AI voice agent management portal by Courtside AI",
   },
 };
