@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { acceptInvite } from "./actions";
@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={<p className="py-8 text-center text-[13px] text-zinc-400">Loading...</p>}>
+      <AcceptInviteContent />
+    </Suspense>
+  );
+}
+
+function AcceptInviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteId = searchParams.get("invite_id");
