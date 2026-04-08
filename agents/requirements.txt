@@ -1,0 +1,9 @@
+livekit-agents>=0.8
+livekit-plugins-openai
+livekit-plugins-deepgram
+livekit-plugins-elevenlabs
+livekit-plugins-silero
+twilio
+httpx
+python-dotenv
+supabase
