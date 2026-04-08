@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
       case "invoice.paid":
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | { id: string } | null };
         const customerId = getCustomerId(invoice as unknown as Record<string, unknown>);
         if (!customerId) break;
 
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
         const subId = typeof invoice.subscription === "string"
           ? invoice.subscription
-          : (invoice.subscription as { id: string })?.id || null;
+          : invoice.subscription?.id || null;
 
         await supabase.from("portal_invoices").upsert({
           id: invoice.id,
