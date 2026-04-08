@@ -46,7 +46,10 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as Stripe.Subscription & {
+          current_period_start?: number;
+          current_period_end?: number;
+        };
         const customerId = getCustomerId(subscription as unknown as Record<string, unknown>);
         if (!customerId) break;
 
