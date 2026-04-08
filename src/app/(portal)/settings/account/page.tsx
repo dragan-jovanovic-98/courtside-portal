@@ -173,7 +173,7 @@ export default function AccountSettingsPage() {
           {/* Timezone */}
           <div className="space-y-1.5">
             <Label className="text-[13px] text-[rgba(0,0,0,0.55)]">Timezone</Label>
-            <Select value={timezone} onValueChange={setTimezone}>
+            <Select value={timezone} onValueChange={(v) => { if (v) setTimezone(v); }}>
               <SelectTrigger className="w-full">
                 <SelectValue>
                   {TIMEZONES.find((tz) => tz.value === timezone)?.label ?? timezone}

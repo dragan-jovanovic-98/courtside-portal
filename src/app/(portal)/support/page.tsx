@@ -196,7 +196,7 @@ export default function SupportPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-[13px] text-[rgba(0,0,0,0.55)]">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={(v) => { if (v) setCategory(v); }}>
                 <SelectTrigger className="w-full">
                   <SelectValue>
                     {CATEGORIES.find((c) => c.value === category)?.label ?? category}
