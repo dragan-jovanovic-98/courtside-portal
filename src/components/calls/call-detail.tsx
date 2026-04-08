@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PhoneIncoming, PhoneOutgoing, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, formatTime, formatDateDotTime } from "@/lib/date";
+import { getOutcomeColor } from "@/lib/constants";
 import { useOrganization } from "@/components/providers/org-provider";
 import type { Call } from "@/lib/types";
 
@@ -194,7 +195,14 @@ export function CallDetail({ call }: { call: Call }) {
               )}
               <InfoRow label="Agent">{call.agent?.name || "—"}</InfoRow>
               {call.outcome_category && (
-                <InfoRow label="Outcome">{call.outcome_category.name}</InfoRow>
+                <InfoRow label="Outcome">
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium text-white"
+                    style={{ backgroundColor: getOutcomeColor(call.outcome_category) }}
+                  >
+                    {call.outcome_category.name}
+                  </span>
+                </InfoRow>
               )}
               {call.outcome_confidence && (
                 <InfoRow label="Confidence">{Math.round(call.outcome_confidence * 100)}%</InfoRow>
