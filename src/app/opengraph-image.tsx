@@ -30,7 +30,7 @@ export default function OGImage() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://courtside-portal.vercel.app/courtside.png"
+            src="https://app.court-side.ai/courtside.png"
             alt=""
             width={80}
             height={80}
