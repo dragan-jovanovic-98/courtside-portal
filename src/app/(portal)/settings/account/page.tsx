@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/components/providers/org-provider";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput, formatPhone, toE164 } from "@/components/ui/phone-input";
+import { StickySaveBar } from "@/components/ui/sticky-save-bar";
 import {
   Select,
   SelectTrigger,
@@ -49,6 +50,33 @@ export default function AccountSettingsPage() {
   const [passwordMessage, setPasswordMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const initials = `${user.first_name?.[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase();
+
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Track baseline values to detect dirty state for the sticky save bar
+  const baseline = useMemo(
+    () => ({
+      firstName: user.first_name,
+      lastName: user.last_name || "",
+      phone: user.phone ? formatPhone(user.phone) : "",
+      timezone: user.timezone || "America/New_York",
+    }),
+    [user]
+  );
+
+  const isDirty =
+    firstName !== baseline.firstName ||
+    lastName !== baseline.lastName ||
+    phone !== baseline.phone ||
+    timezone !== baseline.timezone;
+
+  function discardChanges() {
+    setFirstName(baseline.firstName);
+    setLastName(baseline.lastName);
+    setPhone(baseline.phone);
+    setTimezone(baseline.timezone);
+    setMessage(null);
+  }
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +138,7 @@ export default function AccountSettingsPage() {
         <h2 className="text-[14px] font-semibold text-[#242529]">Profile</h2>
         <p className="mt-1.5 text-[13px] text-[rgba(0,0,0,0.55)]">Manage your personal details.</p>
 
-        <form onSubmit={handleSaveProfile} className="mt-6 space-y-6">
+        <form ref={formRef} onSubmit={handleSaveProfile} className="mt-6 space-y-6">
           {/* Avatar */}
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#242529] text-[18px] font-medium text-white">
@@ -125,7 +153,7 @@ export default function AccountSettingsPage() {
           </div>
 
           {/* Name fields */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="firstName" className="text-[13px] text-[rgba(0,0,0,0.55)]">
                 First name
@@ -152,9 +180,11 @@ export default function AccountSettingsPage() {
           {/* Email */}
           <div className="space-y-1.5">
             <Label className="text-[13px] text-[rgba(0,0,0,0.55)]">Email address</Label>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
               <Input value={user.email} disabled className="flex-1" />
-              <span className="shrink-0 text-[13px] text-[rgba(0,0,0,0.35)]">Contact support to change</span>
+              <span className="text-[12px] text-[rgba(0,0,0,0.4)] sm:shrink-0 sm:text-[13px] sm:text-[rgba(0,0,0,0.35)]">
+                Contact support to change
+              </span>
             </div>
           </div>
 
@@ -195,10 +225,19 @@ export default function AccountSettingsPage() {
             </p>
           )}
 
-          <Button type="submit" disabled={saving} size="sm">
+          {/* Desktop inline save button */}
+          <Button type="submit" disabled={saving} size="sm" className="hidden md:inline-flex">
             {saving ? "Saving..." : "Save changes"}
           </Button>
         </form>
+
+        {/* Mobile sticky save bar */}
+        <StickySaveBar
+          visible={isDirty}
+          saving={saving}
+          onSave={() => formRef.current?.requestSubmit()}
+          onCancel={discardChanges}
+        />
       </div>
 
       <div className="h-px bg-[#eeeff1]" />
@@ -221,7 +260,7 @@ export default function AccountSettingsPage() {
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="newPassword" className="text-[13px] text-[rgba(0,0,0,0.55)]">
                 New password

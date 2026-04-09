@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OrgProvider } from "@/components/providers/org-provider";
 import { SidebarProvider } from "@/components/providers/sidebar-provider";
+import { CommandPaletteProvider } from "@/components/providers/command-palette-provider";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import type { Organization, PortalUser } from "@/lib/types";
@@ -50,15 +51,17 @@ export default async function PortalLayout({
       allMemberships={memberships as PortalUser[]}
     >
       <SidebarProvider>
-        <div className="flex h-dvh">
-          <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <Header />
-            <main className="flex-1 overflow-auto bg-white px-4 py-6 sm:px-8">
-              <div className="mx-auto min-w-0 max-w-[1280px]">{children}</div>
-            </main>
+        <CommandPaletteProvider>
+          <div className="flex h-dvh">
+            <Sidebar />
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              <Header />
+              <main className="flex-1 overflow-auto bg-white px-4 py-5 sm:px-8 sm:py-6">
+                <div className="mx-auto min-w-0 max-w-[1280px]">{children}</div>
+              </main>
+            </div>
           </div>
-        </div>
+        </CommandPaletteProvider>
       </SidebarProvider>
     </OrgProvider>
   );

@@ -75,31 +75,39 @@ export function CallDetail({ call }: { call: Call }) {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-[20px] font-semibold text-[#242529] tracking-[-0.3px]">
+        <h1 className="text-[18px] sm:text-[20px] font-semibold text-[#242529] tracking-[-0.3px] leading-tight">
           {call.caller_name || call.contact?.first_name || formatPhoneNumber(call.caller_number) || "Unknown Caller"}
           {call.outcome_category && (
             <span className="font-normal text-[rgba(0,0,0,0.45)]"> — {call.outcome_category.name}</span>
           )}
         </h1>
-        <div className="mt-2 flex items-center gap-2 text-[13px] text-[rgba(0,0,0,0.55)]">
-          {call.direction === "inbound" ? (
-            <PhoneIncoming className="h-3.5 w-3.5 text-emerald-600" />
-          ) : (
-            <PhoneOutgoing className="h-3.5 w-3.5 text-[rgba(0,0,0,0.35)]" />
-          )}
-          <span className="capitalize">{call.direction} call</span>
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[rgba(0,0,0,0.55)]">
+          <span className="inline-flex items-center gap-1.5">
+            {call.direction === "inbound" ? (
+              <PhoneIncoming className="h-3.5 w-3.5 text-emerald-600" />
+            ) : (
+              <PhoneOutgoing className="h-3.5 w-3.5 text-[rgba(0,0,0,0.35)]" />
+            )}
+            <span className="capitalize">{call.direction} call</span>
+          </span>
           <span className="text-[rgba(0,0,0,0.2)]">·</span>
-          <span>{formatDateDotTime(call.started_at, tz)}</span>
+          <span className="whitespace-nowrap">
+            {formatDateDotTime(call.started_at, tz)}
+          </span>
           <span className="text-[rgba(0,0,0,0.2)]">·</span>
-          <span>{formatDuration(call.duration_seconds)}</span>
+          <span className="whitespace-nowrap">
+            {formatDuration(call.duration_seconds)}
+          </span>
           {call.sentiment && (
             <>
               <span className="text-[rgba(0,0,0,0.2)]">·</span>
-              <span className={cn(
-                call.sentiment === "positive" && "text-emerald-600",
-                call.sentiment === "negative" && "text-rose-500",
-                call.sentiment === "neutral" && "text-[rgba(0,0,0,0.55)]",
-              )}>
+              <span
+                className={cn(
+                  call.sentiment === "positive" && "text-emerald-600",
+                  call.sentiment === "negative" && "text-rose-500",
+                  call.sentiment === "neutral" && "text-[rgba(0,0,0,0.55)]"
+                )}
+              >
                 {call.sentiment}
               </span>
             </>
@@ -113,7 +121,7 @@ export function CallDetail({ call }: { call: Call }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
         {/* Main content */}
         <div className="space-y-0 lg:col-span-2">
           {/* Summary */}
@@ -184,7 +192,7 @@ export function CallDetail({ call }: { call: Call }) {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Call Info */}
-          <div className="rounded-[10px] border border-[#eeeff1] px-5 py-4">
+          <div className="rounded-[10px] border border-[#eeeff1] px-4 py-4 sm:px-5">
             <h3 className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">Call Info</h3>
             <div className="mt-3 divide-y divide-[#eeeff1]/60">
               <InfoRow label="Date">{formatDate(call.started_at, tz)}</InfoRow>
@@ -212,7 +220,7 @@ export function CallDetail({ call }: { call: Call }) {
           </div>
 
           {/* Contact */}
-          <div className="rounded-[10px] border border-[#eeeff1] px-5 py-4">
+          <div className="rounded-[10px] border border-[#eeeff1] px-4 py-4 sm:px-5">
             <h3 className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">Contact</h3>
             <div className="mt-3">
               <p className="text-[14px] font-medium text-[#242529]">

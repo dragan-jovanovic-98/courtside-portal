@@ -6,9 +6,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
-      <div className="w-full max-w-[440px]">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm">
+    <div className="flex min-h-dvh flex-col bg-zinc-50 sm:items-center sm:justify-center sm:px-4">
+      <div className="flex w-full flex-1 flex-col bg-white sm:max-w-[440px] sm:flex-none sm:rounded-2xl sm:border sm:border-zinc-200 sm:shadow-sm">
+        <div className="safe-area-top flex flex-col px-6 pt-10 pb-6 sm:px-10 sm:pt-10 sm:pb-0">
           <div className="flex items-center justify-center gap-2.5">
             <Image
               src="/courtside.png"
@@ -16,9 +16,13 @@ export default function AuthLayout({
               width={30}
               height={30}
             />
-            <span className="text-[17px] font-semibold text-zinc-900">Courtside AI</span>
+            <span className="text-[17px] font-semibold text-zinc-900">
+              Courtside AI
+            </span>
           </div>
-          <div className="mt-8">{children}</div>
+        </div>
+        <div className="flex flex-1 flex-col px-6 pb-10 sm:px-10 sm:pb-10 sm:pt-2 safe-area-bottom">
+          <div className="mt-2 sm:mt-6">{children}</div>
         </div>
       </div>
     </div>

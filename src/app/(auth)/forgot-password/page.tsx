@@ -56,10 +56,10 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
-      <h2 className="text-center text-[15px] font-medium text-zinc-900">
+      <h2 className="text-center text-[18px] font-semibold text-zinc-900 sm:text-[15px] sm:font-medium">
         Reset your password
       </h2>
-      <p className="mt-1 text-center text-[13px] text-zinc-400">
+      <p className="mt-1 text-center text-[14px] text-zinc-500 sm:text-[13px] sm:text-zinc-400">
         Enter your email and we&apos;ll send you a reset link
       </p>
 
@@ -77,15 +77,22 @@ export default function ForgotPasswordPage() {
           <Input
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
             placeholder="you@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
-        <Button type="submit" size="lg" className="h-10 w-full text-[13px]" disabled={loading}>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-12 w-full text-[14px] sm:h-10 sm:text-[13px]"
+          disabled={loading}
+        >
           {loading ? "Sending..." : "Send reset link"}
         </Button>
       </form>

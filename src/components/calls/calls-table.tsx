@@ -1,11 +1,20 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUpDown, ChevronLeft, ChevronRight, PhoneIncoming, PhoneOutgoing, Phone } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Phone,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/date";
 import { useOrganization } from "@/components/providers/org-provider";
 import { SENTIMENT_LABELS, getOutcomeColor } from "@/lib/constants";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { CardList, CardListItem } from "@/components/ui/card-list";
 import type { Call } from "@/lib/types";
 
 interface CallsTableProps {
@@ -24,9 +33,7 @@ function formatDuration(seconds: number | null): string {
 
 function formatPhone(raw: string | null): string {
   if (!raw) return "Unknown";
-  // Strip to digits only
   const digits = raw.replace(/\D/g, "");
-  // US/CAN: 10 or 11 digits (with leading 1)
   const d = digits.length === 11 && digits[0] === "1" ? digits.slice(1) : digits;
   if (d.length === 10) {
     return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
@@ -38,14 +45,15 @@ const cols = "150px 95px 190px 160px 100px 105px 1fr";
 const emptyDash = "text-[14px] text-[rgba(0,0,0,0.25)]";
 const cellBase = "flex items-center px-3 border-r border-[#eeeff1] truncate";
 const cellLast = "flex items-center px-3 truncate";
-const headerText = "text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.4)]";
+const headerText =
+  "text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.4)]";
 
 export function CallsTable({ calls, total, page, perPage }: CallsTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { organization } = useOrganization();
   const tz = organization.timezone;
-  const totalPages = Math.ceil(total / perPage);
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   function toggleSort(column: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -72,116 +80,224 @@ export function CallsTable({ calls, total, page, perPage }: CallsTableProps) {
       <div className="rounded-lg border border-[#eeeff1] bg-white">
         <div className="flex flex-col items-center justify-center py-16">
           <Phone className="h-10 w-10 text-[rgba(0,0,0,0.15)]" />
-          <p className="mt-4 text-[14px] font-medium text-[#242529]">No calls found</p>
-          <p className="mt-1 text-[13px] text-[rgba(0,0,0,0.55)]">Try adjusting your filters or check back later.</p>
+          <p className="mt-4 text-[14px] font-medium text-[#242529]">
+            No calls found
+          </p>
+          <p className="mt-1 text-[13px] text-[rgba(0,0,0,0.55)]">
+            Try adjusting your filters or check back later.
+          </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-[#eeeff1] bg-white overflow-hidden">
-        {/* Header */}
-        <div
-          className="grid border-b border-[#eeeff1]"
-          style={{ gridTemplateColumns: cols }}
-        >
-          <div className={cn(cellBase, headerText, "h-10")}>
-            <button onClick={() => toggleSort("started_at")} className="inline-flex items-center gap-1.5 uppercase">
-              Date / Time <ArrowUpDown className="h-3 w-3" />
-            </button>
-          </div>
-          <div className={cn(cellBase, headerText, "h-10")}>
-            <button onClick={() => toggleSort("duration_seconds")} className="inline-flex items-center gap-1.5 uppercase">
-              Duration <ArrowUpDown className="h-3 w-3" />
-            </button>
-          </div>
-          <div className={cn(cellBase, headerText, "h-10")}>Caller</div>
-          <div className={cn(cellBase, headerText, "h-10")}>Outcome</div>
-          <div className={cn(cellBase, headerText, "h-10")}>Agent</div>
-          <div className={cn(cellBase, headerText, "h-10")}>Sentiment</div>
-          <div className={cn(cellLast, headerText, "h-10")}>Summary</div>
-        </div>
-
-        {/* Rows */}
-        {calls.map((call, i) => (
-          <div
-            key={call.id}
-            className={cn(
-              "grid group cursor-pointer transition-colors hover:bg-[#f8f9fa]",
-              i < calls.length - 1 && "border-b border-[#eeeff1]"
-            )}
-            style={{ gridTemplateColumns: cols, height: 36 }}
-            onClick={() => router.push(`/calls/${call.id}`)}
+  // ----- Desktop table -----
+  const desktop = (
+    <div className="rounded-lg border border-[#eeeff1] bg-white overflow-hidden">
+      {/* Header */}
+      <div
+        className="grid border-b border-[#eeeff1]"
+        style={{ gridTemplateColumns: cols }}
+      >
+        <div className={cn(cellBase, headerText, "h-10")}>
+          <button
+            onClick={() => toggleSort("started_at")}
+            className="inline-flex items-center gap-1.5 uppercase"
           >
-            <div className={cn(cellBase, "text-[14px] font-medium text-[#242529]")}>
-              {formatDateTime(call.started_at, tz)}
-            </div>
+            Date / Time <ArrowUpDown className="h-3 w-3" />
+          </button>
+        </div>
+        <div className={cn(cellBase, headerText, "h-10")}>
+          <button
+            onClick={() => toggleSort("duration_seconds")}
+            className="inline-flex items-center gap-1.5 uppercase"
+          >
+            Duration <ArrowUpDown className="h-3 w-3" />
+          </button>
+        </div>
+        <div className={cn(cellBase, headerText, "h-10")}>Caller</div>
+        <div className={cn(cellBase, headerText, "h-10")}>Outcome</div>
+        <div className={cn(cellBase, headerText, "h-10")}>Agent</div>
+        <div className={cn(cellBase, headerText, "h-10")}>Sentiment</div>
+        <div className={cn(cellLast, headerText, "h-10")}>Summary</div>
+      </div>
 
-            <div className={cn(cellBase, "text-[14px] text-[#242529] tabular-nums")}>
-              {formatDuration(call.duration_seconds)}
-            </div>
+      {/* Rows */}
+      {calls.map((call, i) => (
+        <div
+          key={call.id}
+          className={cn(
+            "grid group cursor-pointer transition-colors hover:bg-[#f8f9fa]",
+            i < calls.length - 1 && "border-b border-[#eeeff1]"
+          )}
+          style={{ gridTemplateColumns: cols, height: 36 }}
+          onClick={() => router.push(`/calls/${call.id}`)}
+        >
+          <div
+            className={cn(cellBase, "text-[14px] font-medium text-[#242529]")}
+          >
+            {formatDateTime(call.started_at, tz)}
+          </div>
 
-            <div className={cn(cellBase, "text-[14px] text-[#242529] gap-2")}>
-              {call.direction === "inbound" ? (
-                <PhoneIncoming className="h-[14px] w-[14px] shrink-0 text-emerald-600" />
-              ) : (
-                <PhoneOutgoing className="h-[14px] w-[14px] shrink-0 text-[rgba(0,0,0,0.3)]" />
-              )}
-              <span className="truncate">{formatPhone(call.caller_number)}</span>
-            </div>
+          <div
+            className={cn(cellBase, "text-[14px] text-[#242529] tabular-nums")}
+          >
+            {formatDuration(call.duration_seconds)}
+          </div>
 
-            <div className={cn(cellBase)}>
-              {call.outcome_category ? (
-                <span
-                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium text-white"
-                  style={{ backgroundColor: getOutcomeColor(call.outcome_category) }}
-                >
-                  {call.outcome_category.name}
-                </span>
-              ) : (
-                <span className={emptyDash}>—</span>
-              )}
-            </div>
+          <div className={cn(cellBase, "text-[14px] text-[#242529] gap-2")}>
+            {call.direction === "inbound" ? (
+              <PhoneIncoming className="h-[14px] w-[14px] shrink-0 text-emerald-600" />
+            ) : (
+              <PhoneOutgoing className="h-[14px] w-[14px] shrink-0 text-[rgba(0,0,0,0.3)]" />
+            )}
+            <span className="truncate">{formatPhone(call.caller_number)}</span>
+          </div>
 
-            <div className={cn(cellBase, "text-[14px] text-[#242529]")}>
-              <span className="truncate">{call.agent?.name || <span className={emptyDash}>—</span>}</span>
-            </div>
+          <div className={cn(cellBase)}>
+            {call.outcome_category ? (
+              <span
+                className="inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium text-white"
+                style={{ backgroundColor: getOutcomeColor(call.outcome_category) }}
+              >
+                {call.outcome_category.name}
+              </span>
+            ) : (
+              <span className={emptyDash}>—</span>
+            )}
+          </div>
 
-            <div className={cn(cellBase)}>
-              {call.sentiment && SENTIMENT_LABELS[call.sentiment] ? (
-                <span className={cn(
+          <div className={cn(cellBase, "text-[14px] text-[#242529]")}>
+            <span className="truncate">
+              {call.agent?.name || <span className={emptyDash}>—</span>}
+            </span>
+          </div>
+
+          <div className={cn(cellBase)}>
+            {call.sentiment && SENTIMENT_LABELS[call.sentiment] ? (
+              <span
+                className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[12px] font-medium",
                   SENTIMENT_LABELS[call.sentiment].bg,
                   SENTIMENT_LABELS[call.sentiment].color
-                )}>
-                  <span className={cn("h-1.5 w-1.5 rounded-full", SENTIMENT_LABELS[call.sentiment].dot)} />
-                  {SENTIMENT_LABELS[call.sentiment].label}
-                </span>
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    SENTIMENT_LABELS[call.sentiment].dot
+                  )}
+                />
+                {SENTIMENT_LABELS[call.sentiment].label}
+              </span>
+            ) : (
+              <span className={emptyDash}>—</span>
+            )}
+          </div>
+
+          <div
+            className={cn(
+              cellLast,
+              "text-[14px] text-[rgba(0,0,0,0.5)] justify-between"
+            )}
+          >
+            <span className="truncate">{call.summary_one_line || "—"}</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-[rgba(0,0,0,0.25)] opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // ----- Mobile card list -----
+  const mobile = (
+    <CardList
+      items={calls}
+      getKey={(c) => c.id}
+      renderCard={(call) => {
+        const sentiment =
+          call.sentiment && SENTIMENT_LABELS[call.sentiment]
+            ? SENTIMENT_LABELS[call.sentiment]
+            : null;
+        return (
+          <CardListItem href={`/calls/${call.id}`} className="py-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f7fa]">
+              {call.direction === "inbound" ? (
+                <PhoneIncoming className="h-[18px] w-[18px] text-emerald-600" />
               ) : (
-                <span className={emptyDash}>—</span>
+                <PhoneOutgoing className="h-[18px] w-[18px] text-[rgba(0,0,0,0.45)]" />
               )}
             </div>
-
-            <div className={cn(cellLast, "text-[14px] text-[rgba(0,0,0,0.5)] justify-between")}>
-              <span className="truncate">{call.summary_one_line || "—"}</span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-[rgba(0,0,0,0.25)] opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-[15px] font-semibold text-[#242529]">
+                  {formatPhone(call.caller_number)}
+                </span>
+                <span className="ml-auto shrink-0 text-[12px] text-[rgba(0,0,0,0.45)] tabular-nums">
+                  {formatDateTime(call.started_at, tz)}
+                </span>
+              </div>
+              {call.summary_one_line && (
+                <p className="line-clamp-1 text-[13px] text-[rgba(0,0,0,0.55)]">
+                  {call.summary_one_line}
+                </p>
+              )}
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center rounded-md bg-[#f5f7fa] px-1.5 py-0.5 text-[11px] font-medium text-[rgba(0,0,0,0.55)] tabular-nums">
+                  {formatDuration(call.duration_seconds)}
+                </span>
+                {call.outcome_category && (
+                  <span
+                    className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium text-white"
+                    style={{
+                      backgroundColor: getOutcomeColor(call.outcome_category),
+                    }}
+                  >
+                    {call.outcome_category.name}
+                  </span>
+                )}
+                {sentiment && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                      sentiment.bg,
+                      sentiment.color
+                    )}
+                  >
+                    <span
+                      className={cn("h-1.5 w-1.5 rounded-full", sentiment.dot)}
+                    />
+                    {sentiment.label}
+                  </span>
+                )}
+                {call.agent?.name && (
+                  <span className="truncate text-[11px] text-[rgba(0,0,0,0.45)]">
+                    · {call.agent.name}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          </CardListItem>
+        );
+      }}
+    />
+  );
+
+  return (
+    <div className="space-y-4">
+      <ResponsiveTable desktop={desktop} mobile={mobile} />
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[13px] text-[rgba(0,0,0,0.45)]">
-          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}
+          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of{" "}
+          {total}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
           <button
             onClick={() => goToPage(page - 1)}
             disabled={page <= 1}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-medium bg-white border border-[#e5e5e5] text-[#525866] hover:bg-[#f8f9fa] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 h-10 sm:h-9 px-3 rounded-lg text-[13px] font-medium bg-white border border-[#e5e5e5] text-[#525866] hover:bg-[#f8f9fa] transition-colors disabled:opacity-40 disabled:pointer-events-none"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             Previous
@@ -192,7 +308,7 @@ export function CallsTable({ calls, total, page, perPage }: CallsTableProps) {
           <button
             onClick={() => goToPage(page + 1)}
             disabled={page >= totalPages}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-medium bg-white border border-[#e5e5e5] text-[#525866] hover:bg-[#f8f9fa] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 h-10 sm:h-9 px-3 rounded-lg text-[13px] font-medium bg-white border border-[#e5e5e5] text-[#525866] hover:bg-[#f8f9fa] transition-colors disabled:opacity-40 disabled:pointer-events-none"
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" />

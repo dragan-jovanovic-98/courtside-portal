@@ -123,8 +123,58 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Prevent accidental horizontal scroll on mobile */
+    overflow-x: hidden;
+    /* Smoother momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
   }
   html {
     @apply font-sans;
+  }
+  /* Allow content to extend behind iOS home indicator */
+  @supports (padding: max(0px)) {
+    .safe-bottom {
+      padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    }
+    .safe-top {
+      padding-top: max(env(safe-area-inset-top), 0px);
+    }
+  }
+}
+
+@utility safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Hide scrollbar but keep scrollable (for chip rows, etc.) */
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
+ * Expand the tap target of small interactive elements to a minimum of 44×44 px
+ * via an invisible ::before overlay. Visual size is preserved.
+ * Only applies on coarse pointers (touch devices) so desktop layout is unaffected.
+ */
+@utility touch-target {
+  position: relative;
+  @media (pointer: coarse) {
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+    }
   }
 }

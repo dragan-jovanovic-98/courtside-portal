@@ -10,22 +10,16 @@ import type { Booking } from "@/lib/types";
 interface BookingDetailProps {
   booking: Booking;
   onClose: () => void;
+  /** When true, renders without the wrapping card chrome (useful inside a dialog/sheet) */
+  bare?: boolean;
 }
 
-export function BookingDetail({ booking, onClose }: BookingDetailProps) {
+export function BookingDetail({ booking, onClose, bare }: BookingDetailProps) {
   const { organization } = useOrganization();
   const tz = organization.timezone;
-  return (
-    <div className="rounded-[10px] border border-[#eeeff1] bg-white">
-      <div className="flex items-center justify-between px-5 py-4">
-        <h3 className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">
-          Booking Details
-        </h3>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="px-5 pb-5 space-y-4">
+
+  const body = (
+    <div className={bare ? "space-y-4" : "px-5 pb-5 space-y-4"}>
         <div>
           <p className="text-[14px] font-medium text-[#242529]">{booking.title || "Untitled"}</p>
           {booking.description && (
@@ -84,6 +78,21 @@ export function BookingDetail({ booking, onClose }: BookingDetailProps) {
           </>
         )}
       </div>
+  );
+
+  if (bare) return body;
+
+  return (
+    <div className="rounded-[10px] border border-[#eeeff1] bg-white">
+      <div className="flex items-center justify-between px-5 py-4">
+        <h3 className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">
+          Booking Details
+        </h3>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      {body}
     </div>
   );
 }

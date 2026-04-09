@@ -14,12 +14,12 @@ import {
   PanelLeftClose,
   LifeBuoy,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/components/providers/org-provider";
 import { useSidebar } from "@/components/providers/sidebar-provider";
+import { useCommandPalette } from "@/components/providers/command-palette-provider";
 import { getNavItems } from "@/lib/permissions";
-import { CommandPalette } from "@/components/command-palette";
 
 const icons = {
   LayoutDashboard,
@@ -46,8 +46,7 @@ export function Sidebar() {
   const { user, organization } = useOrganization();
   const filteredCoreItems = useMemo(() => getNavItems(user.role, coreNavItems), [user.role]);
   const showReferrals = useMemo(() => getNavItems(user.role, [referralItem]).length > 0, [user.role]);
-  const [commandOpen, setCommandOpen] = useState(false);
-  const handleCommandOpenChange = useCallback((open: boolean) => setCommandOpen(open), []);
+  const { setOpen: setCommandOpen } = useCommandPalette();
 
   const orgInitial = organization.name?.[0]?.toUpperCase() ?? "O";
 
@@ -118,8 +117,6 @@ export function Sidebar() {
           <kbd className="text-[11px] text-[rgba(0,0,0,0.35)]">⌘K</kbd>
         </button>
       </div>
-      <CommandPalette open={commandOpen} onOpenChange={handleCommandOpenChange} />
-
       {/* Core navigation */}
       <nav className="flex-1 overflow-y-auto px-2">
         <div className="space-y-px">

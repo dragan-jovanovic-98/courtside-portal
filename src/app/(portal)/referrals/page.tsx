@@ -108,13 +108,13 @@ export default function ReferralsPage() {
   return (
     <div className="space-y-6">
       {/* Referral Link */}
-      <div className="rounded-[10px] border border-[#eeeff1] bg-white px-5 py-4">
+      <div className="rounded-[10px] border border-[#eeeff1] bg-white px-4 py-4 sm:px-5">
         <p className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">
           Your Referral Link
         </p>
         <div className="mt-3 space-y-3">
           <div className="flex items-center gap-2">
-            <code className="flex-1 rounded-md border border-[#eeeff1] bg-[#f8f9fa] px-3 py-2 text-[13px] text-[#242529]">
+            <code className="flex-1 truncate rounded-md border border-[#eeeff1] bg-[#f8f9fa] px-3 py-2.5 text-[12.5px] text-[#242529] sm:py-2 sm:text-[13px]">
               {referralUrl}
             </code>
             <Button variant="outline" size="icon" onClick={copyLink}>
@@ -133,25 +133,25 @@ export default function ReferralsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-[10px] border border-[#eeeff1] bg-white px-5 py-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="rounded-[10px] border border-[#eeeff1] bg-white px-4 py-4 sm:px-5">
           <p className="text-[12px] text-[rgba(0,0,0,0.45)]">Total Referrals</p>
-          <p className="mt-1 text-[24px] font-bold text-[#242529] tracking-[-0.5px]">{referrals.length}</p>
+          <p className="mt-1 text-[22px] sm:text-[24px] font-bold text-[#242529] tracking-[-0.5px]">{referrals.length}</p>
         </div>
-        <div className="rounded-[10px] border border-[#eeeff1] bg-white px-5 py-4">
+        <div className="rounded-[10px] border border-[#eeeff1] bg-white px-4 py-4 sm:px-5">
           <p className="text-[12px] text-[rgba(0,0,0,0.45)]">Signed Up</p>
-          <p className="mt-1 text-[24px] font-bold text-[#242529] tracking-[-0.5px]">{signedUp}</p>
+          <p className="mt-1 text-[22px] sm:text-[24px] font-bold text-[#242529] tracking-[-0.5px]">{signedUp}</p>
         </div>
       </div>
 
       {/* Referral History */}
       <div className="rounded-[10px] border border-[#eeeff1] bg-white">
-        <div className="px-5 py-4">
+        <div className="px-4 py-4 sm:px-5">
           <p className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">
             Referral History
           </p>
         </div>
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-5 sm:px-5">
           {referrals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10">
               <Gift className="h-10 w-10 text-[rgba(0,0,0,0.15)]" />
@@ -159,40 +159,73 @@ export default function ReferralsPage() {
               <p className="mt-1 text-[13px] text-[rgba(0,0,0,0.55)]">Share your link to start earning referral rewards.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="font-semibold">Code</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="font-semibold">Code</TableHead>
+                      <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {referrals.map((ref) => (
+                      <TableRow key={ref.id}>
+                        <TableCell className="font-mono text-[13px]">
+                          {ref.referral_code}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              ref.status === "rewarded"
+                                ? "default"
+                                : ref.status === "signed_up"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {ref.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-[13px] text-[rgba(0,0,0,0.55)]">
+                          {formatDate(ref.created_at, organization.timezone)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="md:hidden divide-y divide-[#eeeff1]">
                 {referrals.map((ref) => (
-                  <TableRow key={ref.id}>
-                    <TableCell className="font-mono text-[13px]">
-                      {ref.referral_code}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          ref.status === "rewarded"
-                            ? "default"
-                            : ref.status === "signed_up"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {ref.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-[13px] text-[rgba(0,0,0,0.55)]">
-                      {formatDate(ref.created_at, organization.timezone)}
-                    </TableCell>
-                  </TableRow>
+                  <div
+                    key={ref.id}
+                    className="flex items-center gap-3 py-3"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="truncate font-mono text-[13px] text-[#242529]">
+                        {ref.referral_code}
+                      </span>
+                      <span className="text-[12px] text-[rgba(0,0,0,0.5)]">
+                        {formatDate(ref.created_at, organization.timezone)}
+                      </span>
+                    </div>
+                    <Badge
+                      variant={
+                        ref.status === "rewarded"
+                          ? "default"
+                          : ref.status === "signed_up"
+                            ? "secondary"
+                            : "outline"
+                      }
+                      className="shrink-0"
+                    >
+                      {ref.status}
+                    </Badge>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </div>
       </div>

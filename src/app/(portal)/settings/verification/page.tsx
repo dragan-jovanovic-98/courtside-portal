@@ -148,7 +148,7 @@ export default function VerificationSettingsPage() {
           </p>
 
           <div className="mt-6 space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="bizName" className="text-[13px] text-[rgba(0,0,0,0.55)]">
                   Business name <span className="text-red-500">*</span>
@@ -216,7 +216,7 @@ export default function VerificationSettingsPage() {
           </p>
 
           <div className="mt-6 space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="cFirst" className="text-[13px] text-[rgba(0,0,0,0.55)]">
                   First name <span className="text-red-500">*</span>
@@ -242,7 +242,7 @@ export default function VerificationSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="cEmail" className="text-[13px] text-[rgba(0,0,0,0.55)]">
                   Email <span className="text-red-500">*</span>

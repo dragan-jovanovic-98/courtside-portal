@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/components/providers/org-provider";
 import { getSettingsTabs } from "@/lib/permissions";
@@ -30,15 +31,11 @@ const settingsTabs = [
   },
   {
     group: "Billing",
-    items: [
-      { label: "Billing & Payment", href: "/settings/billing" },
-    ],
+    items: [{ label: "Billing & Payment", href: "/settings/billing" }],
   },
   {
     group: "Preferences",
-    items: [
-      { label: "Notifications", href: "/settings/notifications" },
-    ],
+    items: [{ label: "Notifications", href: "/settings/notifications" }],
   },
 ];
 
@@ -67,9 +64,14 @@ export default function SettingsLayout({
       .filter((group) => group.items.length > 0);
   }, [filteredTabs]);
 
+  const isIndex = pathname === "/settings";
+  const currentLabel = useMemo(() => {
+    return filteredTabs.find((t) => t.href === pathname)?.label ?? "";
+  }, [filteredTabs, pathname]);
+
   return (
     <div className="flex min-w-0 gap-10">
-      {/* Left sidebar navigation */}
+      {/* Desktop sidebar navigation */}
       <nav className="hidden w-[200px] shrink-0 md:block">
         <div className="sticky top-0 space-y-6">
           {filteredGroups.map((group) => (
@@ -98,28 +100,27 @@ export default function SettingsLayout({
         </div>
       </nav>
 
-      {/* Mobile tab bar */}
-      <nav className="fixed top-0 left-0 right-0 z-20 overflow-x-auto border-b border-[#eeeff1] bg-white p-1 no-scrollbar md:hidden">
-        <div className="flex gap-1">
-          {filteredTabs.map((tab) => (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={cn(
-                "shrink-0 rounded-md px-3 py-1.5 text-[14px] font-medium whitespace-nowrap transition-colors",
-                pathname === tab.href
-                  ? "bg-[#eeeff1] text-[#242529]"
-                  : "text-[rgba(0,0,0,0.55)] hover:bg-[#eeeff1]/60 hover:text-[#242529]"
-              )}
-            >
-              {tab.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
-
       {/* Content */}
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        {/* Mobile back-to-settings header (only on sub-routes) */}
+        {!isIndex && (
+          <div className="md:hidden -mt-1 mb-4 flex items-center gap-1">
+            <Link
+              href="/settings"
+              className="flex h-9 items-center gap-1 -ml-2 pl-1 pr-2 rounded-md text-[14px] font-medium text-[rgba(0,0,0,0.55)] active:bg-[#eeeff1]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Settings
+            </Link>
+            {currentLabel && (
+              <span className="ml-auto text-[12px] font-medium text-[rgba(0,0,0,0.4)]">
+                {currentLabel}
+              </span>
+            )}
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

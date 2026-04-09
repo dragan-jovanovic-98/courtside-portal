@@ -76,10 +76,10 @@ export default function SignupPage() {
 
   return (
     <div>
-      <h2 className="text-center text-[15px] font-medium text-zinc-900">
+      <h2 className="text-center text-[18px] font-semibold text-zinc-900 sm:text-[15px] sm:font-medium">
         Create your account
       </h2>
-      <p className="mt-1 text-center text-[13px] text-zinc-400">
+      <p className="mt-1 text-center text-[14px] text-zinc-500 sm:text-[13px] sm:text-zinc-400">
         Get started with your AI voice agent portal
       </p>
 
@@ -90,7 +90,7 @@ export default function SignupPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="firstName" className="text-[13px] font-medium text-zinc-700">
               First name
@@ -101,7 +101,7 @@ export default function SignupPage() {
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               required
-              className="h-10"
+              className="h-11 sm:h-10"
             />
           </div>
           <div className="space-y-1.5">
@@ -113,7 +113,7 @@ export default function SignupPage() {
               placeholder="Smith"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="h-10"
+              className="h-11 sm:h-10"
             />
           </div>
         </div>
@@ -128,17 +128,17 @@ export default function SignupPage() {
             value={orgName}
             onChange={(e) => setOrgName(e.target.value)}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-zinc-700">
               Industry
             </Label>
             <Select value={industry} onValueChange={(v) => setIndustry(v ?? "")}>
-              <SelectTrigger className="h-10 w-full">
+              <SelectTrigger className="h-11 sm:h-10 w-full">
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
               <SelectContent>
@@ -157,7 +157,7 @@ export default function SignupPage() {
             <PhoneInput
               value={businessPhone}
               onChange={setBusinessPhone}
-              className="h-10"
+              className="h-11 sm:h-10"
             />
           </div>
         </div>
@@ -171,11 +171,13 @@ export default function SignupPage() {
           <Input
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
             placeholder="you@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
@@ -191,11 +193,16 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
-        <Button type="submit" size="lg" className="h-10 w-full text-[13px]" disabled={loading}>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-12 w-full text-[14px] sm:h-10 sm:text-[13px]"
+          disabled={loading}
+        >
           {loading ? "Creating account..." : "Create account"}
         </Button>
       </form>

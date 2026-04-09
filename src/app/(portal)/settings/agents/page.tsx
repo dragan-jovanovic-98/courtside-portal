@@ -164,7 +164,7 @@ export default function AgentsSettingsPage() {
                   {/* Expanded config — client-editable fields only */}
                   {isExpanded && (
                     <div className="border-t border-[#eeeff1] px-4 py-5 space-y-5">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <Label className="text-[13px] text-[rgba(0,0,0,0.55)]">Display name</Label>
                           <Input

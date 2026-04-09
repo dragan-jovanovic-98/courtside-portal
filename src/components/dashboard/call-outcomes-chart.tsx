@@ -54,23 +54,35 @@ export function CallOutcomesChart({ data }: { data: OutcomeChartData[] }) {
 
   return (
     <div className="rounded-lg border border-[#eeeff1] bg-white h-full flex flex-col">
-      <div className="flex items-center justify-between px-5 py-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">Call Outcomes</p>
-        <div className="flex items-center gap-4 text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.35)]">
+      <div className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">
+          Call Outcomes
+        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.35)] sm:gap-4">
           {Object.entries(TIER_LABELS).map(([tier, label]) => (
             <span key={tier} className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: DEFAULT_OUTCOME_COLORS[tier] }} />
+              <span
+                className="h-2 w-2 rounded-[2px]"
+                style={{ backgroundColor: DEFAULT_OUTCOME_COLORS[tier] }}
+              />
               {label}
             </span>
           ))}
         </div>
       </div>
-      <div className="flex-1 px-4 pb-4">
+      <div className="flex-1 px-2 pb-4 sm:px-4">
         <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart data={data} layout="vertical" margin={{ left: 0, right: 12 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
             <XAxis type="number" tick={{ fontSize: 11, fill: "rgba(0,0,0,0.3)" }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: "#242529", fontWeight: 500 }} axisLine={false} tickLine={false} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={90}
+              tick={{ fontSize: 11, fill: "#242529", fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+            />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8f9fa" }} />
             <Bar
               dataKey="count"

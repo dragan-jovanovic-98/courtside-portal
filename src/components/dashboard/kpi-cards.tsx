@@ -73,23 +73,32 @@ export function KpiCards({ data }: { data: KpiData }) {
   return (
     <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#eeeff1] bg-[#eeeff1] lg:grid-cols-3 xl:grid-cols-5">
       {cards.map((card) => (
-        <div key={card.label} className="flex flex-col justify-between bg-white px-5 py-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">
+        <div
+          key={card.label}
+          className="flex flex-col justify-between bg-white px-3.5 py-3.5 sm:px-5 sm:py-5"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)] line-clamp-1">
             {card.label}
           </p>
           <div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <p className="text-[22px] font-bold leading-none text-[#242529] tabular-nums tracking-[-0.5px]">
+            <div className="mt-2.5 sm:mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <p className="text-[20px] sm:text-[22px] font-bold leading-none text-[#242529] tabular-nums tracking-[-0.5px]">
                 {card.value}
               </p>
               <Trend value={card.trend} />
             </div>
             {card.note ? (
-              <p className="mt-2 text-[11px] text-[rgba(0,0,0,0.3)]">{card.note}</p>
+              <p className="mt-2 text-[11px] text-[rgba(0,0,0,0.3)] line-clamp-1">
+                {card.note}
+              </p>
             ) : data.hasPreviousData ? (
-              <p className="mt-2 text-[11px] text-[rgba(0,0,0,0.3)]">vs. previous period</p>
+              <p className="mt-2 text-[11px] text-[rgba(0,0,0,0.3)]">
+                vs. previous period
+              </p>
             ) : (
-              <p className="mt-2 text-[11px] text-[rgba(0,0,0,0.2)]">Not enough data for trends</p>
+              <p className="mt-2 text-[11px] text-[rgba(0,0,0,0.2)]">
+                Not enough data for trends
+              </p>
             )}
           </div>
         </div>

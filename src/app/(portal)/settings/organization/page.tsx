@@ -17,17 +17,22 @@ import {
 } from "@/components/ui/select";
 import { INDUSTRIES, OUTCOME_COLOR_PRESETS, getOutcomeColor } from "@/lib/constants";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  ResponsiveDialog as Dialog,
+  ResponsiveDialogContent as DialogContent,
+  ResponsiveDialogHeader as DialogHeader,
+  ResponsiveDialogTitle as DialogTitle,
+  ResponsiveDialogDescription as DialogDescription,
+  ResponsiveDialogFooter as DialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Plus, Trash2, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { OutcomeCategory } from "@/lib/types";
+import {
+  saveOutcomeCategories,
+  getOutcomeCategoryUsage,
+  deleteOutcomeCategoryWithReassignment,
+} from "./actions";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (ET)" },
@@ -164,7 +169,7 @@ export default function OrganizationSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="orgName" className="text-[13px] text-[rgba(0,0,0,0.55)]">Business name</Label>
                 <Input id="orgName" value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} required />
@@ -186,7 +191,7 @@ export default function OrganizationSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="bizPhone" className="text-[13px] text-[rgba(0,0,0,0.55)]">Phone</Label>
                 <PhoneInput id="bizPhone" value={businessPhone} onChange={setBusinessPhone} disabled={!canEdit} />
@@ -229,7 +234,7 @@ export default function OrganizationSettingsPage() {
           <h2 className="text-[14px] font-semibold text-[#242529]">Email settings</h2>
           <p className="mt-1.5 text-[13px] text-[rgba(0,0,0,0.55)]">Where notifications and invoices are sent.</p>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="primaryEmail" className="text-[13px] text-[rgba(0,0,0,0.55)]">Primary email</Label>
               <Input id="primaryEmail" type="email" value={primaryEmail} onChange={(e) => setPrimaryEmail(e.target.value)} disabled={!canEdit} placeholder="hello@company.com" />
@@ -248,7 +253,7 @@ export default function OrganizationSettingsPage() {
           <h2 className="text-[14px] font-semibold text-[#242529]">Conversion metrics</h2>
           <p className="mt-1.5 text-[13px] text-[rgba(0,0,0,0.55)]">Configure how revenue impact is calculated from calls.</p>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="convLabel" className="text-[13px] text-[rgba(0,0,0,0.55)]">Conversion metric label</Label>
               <Input id="convLabel" value={conversionLabel} onChange={(e) => setConversionLabel(e.target.value)} disabled={!canEdit} />
@@ -285,11 +290,18 @@ export default function OrganizationSettingsPage() {
   );
 }
 
+function isLocalOnly(id: string) {
+  return id.startsWith("new-");
+}
+
 function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: string; canEdit: boolean; onDirtyChange: (dirty: boolean) => void }) {
   const [categories, setCategories] = useState<OutcomeCategory[]>([]);
   const [savedSnapshot, setSavedSnapshot] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<OutcomeCategory | null>(null);
+  const [deleteUsage, setDeleteUsage] = useState<number | null>(null);
+  const [replacementId, setReplacementId] = useState<string>("");
+  const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -358,9 +370,67 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
     setExpandedId(newId);
   }
 
-  function removeCategory(id: string) {
+  function removeCategoryLocal(id: string) {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     if (expandedId === id) setExpandedId(null);
+  }
+
+  async function startDelete(cat: OutcomeCategory) {
+    // Unsaved (synthetic-id) rows have no server presence — delete locally.
+    if (isLocalOnly(cat.id)) {
+      removeCategoryLocal(cat.id);
+      return;
+    }
+    setDeleteTarget(cat);
+    setDeleteUsage(null);
+    setReplacementId("");
+
+    const result = await getOutcomeCategoryUsage({ orgId, categoryId: cat.id });
+    if ("error" in result) {
+      setMessage({ text: "Failed to check usage: " + result.error, type: "error" });
+      setDeleteTarget(null);
+      return;
+    }
+    setDeleteUsage(result.count);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    if (deleteUsage === null) return;
+    // Force reassignment when calls are attached. The Confirm button is
+    // disabled in this branch until a replacement is picked.
+    if (deleteUsage > 0 && !replacementId) return;
+
+    setDeleting(true);
+    const result = await deleteOutcomeCategoryWithReassignment({
+      orgId,
+      categoryId: deleteTarget.id,
+      replacementId: deleteUsage > 0 ? replacementId : null,
+    });
+    setDeleting(false);
+
+    if ("error" in result) {
+      setMessage({ text: "Failed to delete: " + result.error, type: "error" });
+      return;
+    }
+
+    removeCategoryLocal(deleteTarget.id);
+    setDeleteTarget(null);
+    setDeleteUsage(null);
+    setReplacementId("");
+    setMessage({
+      text:
+        result.reassigned > 0
+          ? `Deleted "${deleteTarget.name}" and reassigned ${result.reassigned} call${result.reassigned === 1 ? "" : "s"}.`
+          : `Deleted "${deleteTarget.name}".`,
+      type: "success",
+    });
+  }
+
+  function cancelDelete() {
+    setDeleteTarget(null);
+    setDeleteUsage(null);
+    setReplacementId("");
   }
 
   function toggleExpand(id: string) {
@@ -370,36 +440,32 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
   async function handleSave() {
     setSaving(true);
     setMessage(null);
-    const supabase = createClient();
 
-    await supabase.from("portal_outcome_categories").delete().eq("org_id", orgId);
-
-    const toInsert = categories.map((c, i) => ({
-      org_id: orgId,
-      name: c.name,
-      description: c.description || null,
-      impact_tier: c.impact_tier,
-      color: c.color,
-      sort_order: i + 1,
-      close_likelihood: c.close_likelihood,
-    }));
-
-    const { error } = await supabase.from("portal_outcome_categories").insert(toInsert);
+    // Build the diff payload. The server action strips synthetic local IDs
+    // (created by addCategory) so the RPC inserts them as new rows, while
+    // real UUIDs drive UPDATE-by-id and preserve portal_calls foreign keys.
+    const result = await saveOutcomeCategories({
+      orgId,
+      categories: categories.map((c, i) => ({
+        id: isLocalOnly(c.id) ? null : c.id,
+        name: c.name,
+        description: c.description || null,
+        impact_tier: c.impact_tier,
+        color: c.color,
+        sort_order: i + 1,
+        close_likelihood: c.close_likelihood,
+      })),
+    });
 
     setSaving(false);
-    if (error) {
-      setMessage({ text: "Failed to save: " + error.message, type: "error" });
-    } else {
-      const { data } = await supabase
-        .from("portal_outcome_categories")
-        .select("*")
-        .eq("org_id", orgId)
-        .order("sort_order");
-      const saved = (data as OutcomeCategory[]) || [];
-      setCategories(saved);
-      setSavedSnapshot(categoryFingerprint(saved));
-      setMessage({ text: "Outcome categories saved.", type: "success" });
+    if ("error" in result) {
+      setMessage({ text: "Failed to save: " + result.error, type: "error" });
+      return;
     }
+
+    setCategories(result.categories);
+    setSavedSnapshot(categoryFingerprint(result.categories));
+    setMessage({ text: "Outcome categories saved.", type: "success" });
   }
 
   if (loading) {
@@ -556,7 +622,7 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setDeleteTarget(cat);
+                      void startDelete(cat);
                     }}
                     className="shrink-0 text-[rgba(0,0,0,0.35)] hover:text-red-500"
                   >
@@ -600,34 +666,64 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
         )}
       </div>
 
-      {/* Delete confirmation dialog */}
+      {/* Delete dialog — forces reassignment when calls are attached */}
       <Dialog
         open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onOpenChange={(open) => {
+          if (!open) cancelDelete();
+        }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete outcome category</DialogTitle>
+            <DialogTitle>Delete &ldquo;{deleteTarget?.name}&rdquo;?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{deleteTarget?.name}&rdquo;? Existing calls
-              assigned to this category will lose their outcome classification.
+              {deleteUsage === null
+                ? "Checking how many calls use this category…"
+                : deleteUsage === 0
+                ? "No calls are assigned to this category. It can be deleted safely."
+                : `${deleteUsage} call${deleteUsage === 1 ? " is" : "s are"} classified as "${deleteTarget?.name}". Pick a category to move them to before deleting.`}
             </DialogDescription>
           </DialogHeader>
+
+          {deleteUsage !== null && deleteUsage > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-[13px] text-[rgba(0,0,0,0.55)]">Move calls to</Label>
+              <Select value={replacementId} onValueChange={(v) => setReplacementId(v ?? "")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a replacement category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories
+                    .filter((c) => c.id !== deleteTarget?.id && !isLocalOnly(c.id))
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline" size="sm" onClick={cancelDelete} disabled={deleting}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => {
-                if (deleteTarget) {
-                  removeCategory(deleteTarget.id);
-                  setDeleteTarget(null);
-                }
-              }}
+              onClick={() => void confirmDelete()}
+              disabled={
+                deleting ||
+                deleteUsage === null ||
+                (deleteUsage > 0 && !replacementId)
+              }
             >
-              Delete
+              {deleting
+                ? "Deleting…"
+                : deleteUsage && deleteUsage > 0
+                ? "Reassign and delete"
+                : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

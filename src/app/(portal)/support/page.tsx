@@ -183,7 +183,7 @@ export default function SupportPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="supportSubject" className="text-[13px] text-[rgba(0,0,0,0.55)]">Subject</Label>
               <Input

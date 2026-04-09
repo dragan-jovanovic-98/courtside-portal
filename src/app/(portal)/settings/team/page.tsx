@@ -23,13 +23,13 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  ResponsiveDialog as Dialog,
+  ResponsiveDialogContent as DialogContent,
+  ResponsiveDialogHeader as DialogHeader,
+  ResponsiveDialogTitle as DialogTitle,
+  ResponsiveDialogDescription as DialogDescription,
+  ResponsiveDialogFooter as DialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { MoreHorizontal, X, Clock } from "lucide-react";
 import { formatDate } from "@/lib/date";
 import { inviteTeamMember, cancelInvitation, updateMemberRole, removeMember } from "./actions";

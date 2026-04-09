@@ -79,19 +79,29 @@ export function HoursPieChart({ data }: { data: HoursChartData }) {
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
-        <div className="flex items-center gap-6 mt-2">
-          <button onClick={() => router.push("/calls?hours=business")} className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
+          <button
+            onClick={() => router.push("/calls?hours=business")}
+            className="flex items-center gap-2 active:opacity-70 transition-opacity"
+          >
             <span className="h-2.5 w-2.5 rounded-[3px] bg-[#242529]" />
             <div>
               <span className="text-[14px] font-bold text-[#242529]">{bPct}%</span>
-              <span className="text-[12px] text-[rgba(0,0,0,0.4)] ml-1.5">Business hours</span>
+              <span className="text-[12px] text-[rgba(0,0,0,0.4)] ml-1.5">
+                Business hours
+              </span>
             </div>
           </button>
-          <button onClick={() => router.push("/calls?hours=after")} className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+          <button
+            onClick={() => router.push("/calls?hours=after")}
+            className="flex items-center gap-2 active:opacity-70 transition-opacity"
+          >
             <span className="h-2.5 w-2.5 rounded-[3px] bg-[#d4d4d8]" />
             <div>
               <span className="text-[14px] font-bold text-[#242529]">{aPct}%</span>
-              <span className="text-[12px] text-[rgba(0,0,0,0.4)] ml-1.5">After hours</span>
+              <span className="text-[12px] text-[rgba(0,0,0,0.4)] ml-1.5">
+                After hours
+              </span>
             </div>
           </button>
         </div>

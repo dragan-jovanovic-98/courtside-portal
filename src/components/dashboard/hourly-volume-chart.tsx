@@ -37,19 +37,23 @@ export function HourlyVolumeChart({ data }: { data: VolumeByHourData[] }) {
 
   return (
     <div className="rounded-lg border border-[#eeeff1] bg-white">
-      <div className="flex items-baseline gap-3 px-5 py-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">Hourly Volume</p>
-        <span className="text-[12px] text-[rgba(0,0,0,0.3)]">Peak: {formatHourFull(peak?.hour ?? 0)}</span>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-4 sm:px-5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">
+          Hourly Volume
+        </p>
+        <span className="text-[12px] text-[rgba(0,0,0,0.3)]">
+          Peak: {formatHourFull(peak?.hour ?? 0)}
+        </span>
       </div>
-      <div className="px-4 pb-4">
+      <div className="px-2 pb-4 sm:px-4">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data} margin={{ left: -20, right: 4 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
             <ReferenceArea x1={9} x2={17} fill="#f8f9fa" fillOpacity={1} />
             <XAxis dataKey="hour" tickFormatter={formatHour} tick={{ fontSize: 11, fill: "rgba(0,0,0,0.3)" }} interval={2} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "rgba(0,0,0,0.3)" }} allowDecimals={false} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: "rgba(0,0,0,0.3)" }} allowDecimals={false} axisLine={false} tickLine={false} width={28} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
-            <Bar dataKey="count" fill="#242529" radius={[2, 2, 0, 0]} barSize={12} />
+            <Bar dataKey="count" fill="#242529" radius={[2, 2, 0, 0]} maxBarSize={12} />
           </BarChart>
         </ResponsiveContainer>
       </div>

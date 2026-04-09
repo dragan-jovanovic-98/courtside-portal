@@ -11,7 +11,7 @@ export function TranscriptView({ entries }: { entries: TranscriptEntry[] }) {
   }
 
   return (
-    <div className="max-h-[500px] space-y-3 overflow-y-auto rounded-md border border-[#eeeff1] bg-[#f8f9fa] p-4">
+    <div className="max-h-[60dvh] sm:max-h-[500px] space-y-3 overflow-y-auto rounded-md border border-[#eeeff1] bg-[#f8f9fa] p-3 sm:p-4">
       {entries.map((entry, i) => (
         <div
           key={i}
@@ -22,7 +22,7 @@ export function TranscriptView({ entries }: { entries: TranscriptEntry[] }) {
         >
           <div
             className={cn(
-              "max-w-[80%] rounded-lg px-3 py-2 text-[13px]",
+              "max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 text-[13px] break-words",
               entry.role === "agent"
                 ? "bg-white border border-[#eeeff1]"
                 : "bg-[#242529] text-white"

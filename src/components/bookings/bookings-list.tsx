@@ -12,6 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { CardList, CardListItem } from "@/components/ui/card-list";
 import type { Booking } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -30,19 +32,24 @@ interface BookingsListProps {
 export function BookingsList({ bookings, onSelect }: BookingsListProps) {
   const { organization } = useOrganization();
   const tz = organization.timezone;
+
   if (bookings.length === 0) {
     return (
       <div className="rounded-lg border border-[#eeeff1] bg-white">
         <div className="flex flex-col items-center justify-center py-16">
           <CalendarDays className="h-10 w-10 text-[rgba(0,0,0,0.15)]" />
-          <p className="mt-4 text-[14px] font-medium text-[#242529]">No bookings yet</p>
-          <p className="mt-1 text-[13px] text-[rgba(0,0,0,0.55)]">Bookings will appear here when your agent schedules appointments.</p>
+          <p className="mt-4 text-[14px] font-medium text-[#242529]">
+            No bookings yet
+          </p>
+          <p className="mt-1 text-[13px] text-[rgba(0,0,0,0.55)]">
+            Bookings will appear here when your agent schedules appointments.
+          </p>
         </div>
       </div>
     );
   }
 
-  return (
+  const desktop = (
     <div className="rounded-lg border border-[#eeeff1] bg-white">
       <Table>
         <TableHeader>
@@ -84,4 +91,45 @@ export function BookingsList({ bookings, onSelect }: BookingsListProps) {
       </Table>
     </div>
   );
+
+  const mobile = (
+    <CardList
+      items={bookings}
+      getKey={(b) => b.id}
+      renderCard={(booking) => (
+        <CardListItem onClick={() => onSelect(booking)} className="py-3.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f7fa]">
+            <CalendarDays className="h-[18px] w-[18px] text-[rgba(0,0,0,0.55)]" />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-[15px] font-semibold text-[#242529]">
+                {booking.title || "Untitled"}
+              </span>
+              <Badge
+                className={`ml-auto shrink-0 text-[10px] ${
+                  STATUS_COLORS[booking.status] || ""
+                }`}
+              >
+                {booking.status}
+              </Badge>
+            </div>
+            <span className="truncate text-[13px] text-[rgba(0,0,0,0.55)]">
+              {formatDateTimeFull(booking.scheduled_at, tz)}
+            </span>
+            <div className="mt-0.5 flex items-center gap-2 text-[12px] text-[rgba(0,0,0,0.5)]">
+              {booking.service_type && (
+                <span className="truncate">{booking.service_type}</span>
+              )}
+              <span className="ml-auto shrink-0 tabular-nums">
+                {booking.duration_minutes} min
+              </span>
+            </div>
+          </div>
+        </CardListItem>
+      )}
+    />
+  );
+
+  return <ResponsiveTable desktop={desktop} mobile={mobile} />;
 }

@@ -111,10 +111,10 @@ function AcceptInviteContent() {
 
   return (
     <div>
-      <h2 className="text-center text-[15px] font-medium text-zinc-900">
+      <h2 className="text-center text-[18px] font-semibold text-zinc-900 sm:text-[15px] sm:font-medium">
         Join {orgName}
       </h2>
-      <p className="mt-1 text-center text-[13px] text-zinc-400">
+      <p className="mt-1 text-center text-[14px] text-zinc-500 sm:text-[13px] sm:text-zinc-400">
         Complete your profile to get started
       </p>
 
@@ -127,7 +127,7 @@ function AcceptInviteContent() {
 
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-zinc-700">Email</Label>
-          <Input value={authUser?.email || ""} disabled className="h-10" />
+          <Input value={authUser?.email || ""} disabled className="h-11 sm:h-10" />
         </div>
 
         <div className="space-y-1.5">
@@ -140,11 +140,11 @@ function AcceptInviteContent() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-[13px] font-medium text-zinc-700">
               Password
@@ -157,7 +157,7 @@ function AcceptInviteContent() {
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
               required
-              className="h-10"
+              className="h-11 sm:h-10"
             />
           </div>
           <div className="space-y-1.5">
@@ -171,12 +171,17 @@ function AcceptInviteContent() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={6}
               required
-              className="h-10"
+              className="h-11 sm:h-10"
             />
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="h-10 w-full text-[13px]" disabled={loading}>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-12 w-full text-[14px] sm:h-10 sm:text-[13px]"
+          disabled={loading}
+        >
           {loading ? "Joining..." : "Join team"}
         </Button>
       </form>

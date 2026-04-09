@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/components/providers/org-provider";
 import { useSidebar } from "@/components/providers/sidebar-provider";
+import { useCommandPalette } from "@/components/providers/command-palette-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import {
   DropdownMenu,
@@ -22,6 +23,8 @@ import {
   LifeBuoy,
   LogOut,
   PanelLeft,
+  Menu,
+  Search,
 } from "lucide-react";
 
 const pageConfig: Record<string, { title: string; icon: typeof LayoutDashboard }> = {
@@ -48,6 +51,7 @@ export function Header() {
   const router = useRouter();
   const { user } = useOrganization();
   const { collapsed, setCollapsed } = useSidebar();
+  const { setOpen: setCommandOpen } = useCommandPalette();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -62,29 +66,54 @@ export function Header() {
     (user.first_name?.[0] ?? "") + (user.last_name?.[0] ?? "");
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#eeeff1] bg-white px-4">
-      <div className="flex items-center gap-2">
+    <header className="safe-area-top flex h-14 sm:h-12 shrink-0 items-center justify-between border-b border-[#eeeff1] bg-white px-3 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* Desktop: collapsed sidebar reopen */}
         {collapsed && (
           <button
             onClick={() => setCollapsed(false)}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-[rgba(0,0,0,0.35)] transition-colors hover:bg-[#eeeff1] hover:text-[#242529]"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded-md text-[rgba(0,0,0,0.35)] transition-colors hover:bg-[#eeeff1] hover:text-[#242529]"
+            aria-label="Open sidebar"
           >
             <PanelLeft className="h-4 w-4" />
           </button>
         )}
-        <MobileNav />
-        <div className="flex items-center gap-1.5">
-          <PageIcon className="h-4 w-4 text-[rgba(0,0,0,0.35)]" />
-          <span className="text-[14px] font-medium text-[#242529]">
+
+        {/* Mobile hamburger → drawer */}
+        <div className="md:hidden">
+          <MobileNav
+            trigger={
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#242529] active:bg-[#eeeff1] -ml-1.5"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            }
+          />
+        </div>
+
+        <div className="flex min-w-0 items-center gap-1.5">
+          <PageIcon className="hidden sm:block h-4 w-4 text-[rgba(0,0,0,0.35)]" />
+          <span className="truncate text-[15px] sm:text-[14px] font-semibold sm:font-medium text-[#242529]">
             {config.title}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex items-center gap-1">
+        {/* Search / command palette trigger */}
+        <button
+          onClick={() => setCommandOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[rgba(0,0,0,0.55)] transition-colors hover:bg-[#eeeff1] hover:text-[#242529] active:bg-[#eeeff1]"
+          aria-label="Open search"
+        >
+          <Search className="h-[18px] w-[18px] sm:h-4 sm:w-4" />
+        </button>
+
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center rounded-full transition-opacity hover:opacity-80 focus:outline-none">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#242529] text-[10px] font-medium text-white">
+          <DropdownMenuTrigger className="flex items-center rounded-full transition-opacity hover:opacity-80 focus:outline-none ml-0.5">
+            <div className="flex h-7 w-7 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-[#242529] text-[11px] sm:text-[10px] font-medium text-white">
               {initials.toUpperCase()}
             </div>
           </DropdownMenuTrigger>
@@ -111,3 +140,4 @@ export function Header() {
     </header>
   );
 }
+

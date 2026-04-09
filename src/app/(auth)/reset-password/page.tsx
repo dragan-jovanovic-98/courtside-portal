@@ -42,10 +42,10 @@ export default function ResetPasswordPage() {
 
   return (
     <div>
-      <h2 className="text-center text-[15px] font-medium text-zinc-900">
+      <h2 className="text-center text-[18px] font-semibold text-zinc-900 sm:text-[15px] sm:font-medium">
         Set a new password
       </h2>
-      <p className="mt-1 text-center text-[13px] text-zinc-400">
+      <p className="mt-1 text-center text-[14px] text-zinc-500 sm:text-[13px] sm:text-zinc-400">
         Enter your new password below
       </p>
 
@@ -68,7 +68,7 @@ export default function ResetPasswordPage() {
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             minLength={6}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 

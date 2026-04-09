@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { CalendarView } from "@/components/bookings/calendar-view";
 import { BookingsList } from "@/components/bookings/bookings-list";
 import { BookingDetail } from "@/components/bookings/booking-detail";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import type { Booking } from "@/lib/types";
 
 export function BookingsPageContent({ bookings }: { bookings: Booking[] }) {
@@ -127,14 +133,40 @@ export function BookingsPageContent({ bookings }: { bookings: Booking[] }) {
           )}
         </div>
 
+        {/* Desktop (lg+): inline detail panel */}
         {selectedBooking && (
-          <div>
+          <div className="hidden lg:block">
             <BookingDetail
               booking={selectedBooking}
               onClose={() => setSelectedBooking(null)}
             />
           </div>
         )}
+      </div>
+
+      {/* Mobile/tablet (< lg): detail in a bottom sheet / centered modal */}
+      <div className="lg:hidden">
+        <ResponsiveDialog
+          open={!!selectedBooking}
+          onOpenChange={(open) => {
+            if (!open) setSelectedBooking(null);
+          }}
+        >
+          <ResponsiveDialogContent>
+            <ResponsiveDialogHeader>
+              <ResponsiveDialogTitle>Booking details</ResponsiveDialogTitle>
+            </ResponsiveDialogHeader>
+            {selectedBooking && (
+              <div className="max-h-[70dvh] overflow-y-auto">
+                <BookingDetail
+                  booking={selectedBooking}
+                  onClose={() => setSelectedBooking(null)}
+                  bare
+                />
+              </div>
+            )}
+          </ResponsiveDialogContent>
+        </ResponsiveDialog>
       </div>
     </div>
   );

@@ -38,10 +38,10 @@ export default function LoginPage() {
 
   return (
     <div>
-      <h2 className="text-center text-[15px] font-medium text-zinc-900">
+      <h2 className="text-center text-[18px] font-semibold text-zinc-900 sm:text-[15px] sm:font-medium">
         Sign in to your account
       </h2>
-      <p className="mt-1 text-center text-[13px] text-zinc-400">
+      <p className="mt-1 text-center text-[14px] text-zinc-500 sm:text-[13px] sm:text-zinc-400">
         Enter your credentials to continue
       </p>
 
@@ -53,40 +53,57 @@ export default function LoginPage() {
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-[13px] font-medium text-zinc-700">
+          <Label
+            htmlFor="email"
+            className="text-[13px] font-medium text-zinc-700"
+          >
             Email
           </Label>
           <Input
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
             placeholder="you@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-[13px] font-medium text-zinc-700">
+            <Label
+              htmlFor="password"
+              className="text-[13px] font-medium text-zinc-700"
+            >
               Password
             </Label>
-            <Link href="/forgot-password" className="text-[12px] text-zinc-400 hover:text-zinc-700">
+            <Link
+              href="/forgot-password"
+              className="text-[12px] text-zinc-500 active:text-zinc-700 sm:text-zinc-400 sm:hover:text-zinc-700"
+            >
               Forgot password?
             </Link>
           </div>
           <Input
             id="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="h-10"
+            className="h-11 sm:h-10"
           />
         </div>
 
-        <Button type="submit" size="lg" className="h-10 w-full text-[13px]" disabled={loading}>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-12 w-full text-[14px] sm:h-10 sm:text-[13px]"
+          disabled={loading}
+        >
           {loading ? "Signing in..." : "Sign in"}
         </Button>
       </form>

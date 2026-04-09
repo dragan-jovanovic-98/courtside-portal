@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -7,6 +7,13 @@ const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
 
 export const metadata: Metadata = {
   title: "Courtside AI - Client Portal",
@@ -38,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="min-h-dvh flex flex-col font-sans overflow-x-hidden">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

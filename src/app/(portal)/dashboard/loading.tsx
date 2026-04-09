@@ -13,7 +13,10 @@ export default function DashboardLoading() {
       {/* KPI cards skeleton */}
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#eeeff1] bg-[#eeeff1] lg:grid-cols-3 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex flex-col justify-between bg-white px-5 py-5">
+          <div
+            key={i}
+            className="flex flex-col justify-between bg-white px-3.5 py-3.5 sm:px-5 sm:py-5"
+          >
             <div className="h-3 w-20 animate-pulse rounded bg-[#eeeff1]" />
             <div className="mt-4 h-7 w-16 animate-pulse rounded bg-[#eeeff1]" />
             <div className="mt-3 h-3 w-24 animate-pulse rounded bg-[#eeeff1]" />
