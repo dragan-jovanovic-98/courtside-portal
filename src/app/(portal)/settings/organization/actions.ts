@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { OutcomeCategory, ImpactTier } from "@/lib/types";
 
@@ -15,19 +14,24 @@ export interface OutcomeCategoryInput {
   close_likelihood: number;
 }
 
-type AdminAuth =
-  | { ok: true; admin: ReturnType<typeof createAdminClient> }
+type SessionClient = Awaited<ReturnType<typeof createClient>>;
+
+type Auth =
+  | { ok: true; supabase: SessionClient }
   | { ok: false; error: string };
 
-async function requireOrgAdmin(orgId: string): Promise<AdminAuth> {
+// Session-scoped auth. The returned client carries the user's JWT so the
+// RPCs below run with a real auth.uid(), which lets the SECURITY DEFINER
+// functions enforce their own role check as defense in depth on top of
+// this pre-check.
+async function requireOrgAdmin(orgId: string): Promise<Auth> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const admin = createAdminClient();
-  const { data: caller } = await admin
+  const { data: caller } = await supabase
     .from("portal_users")
     .select("role")
     .eq("auth_id", user.id)
@@ -37,7 +41,7 @@ async function requireOrgAdmin(orgId: string): Promise<AdminAuth> {
   if (!caller || (caller.role !== "owner" && caller.role !== "admin")) {
     return { ok: false, error: "Permission denied" };
   }
-  return { ok: true, admin };
+  return { ok: true, supabase };
 }
 
 export async function saveOutcomeCategories(params: {
@@ -59,7 +63,7 @@ export async function saveOutcomeCategories(params: {
     close_likelihood: c.close_likelihood,
   }));
 
-  const { data, error } = await auth.admin.rpc("portal_update_outcome_categories", {
+  const { data, error } = await auth.supabase.rpc("portal_update_outcome_categories", {
     p_org_id: params.orgId,
     p_categories: payload,
   });
@@ -77,7 +81,7 @@ export async function getOutcomeCategoryUsage(params: {
   const auth = await requireOrgAdmin(params.orgId);
   if (!auth.ok) return { error: auth.error };
 
-  const { count, error } = await auth.admin
+  const { count, error } = await auth.supabase
     .from("portal_calls")
     .select("id", { count: "exact", head: true })
     .eq("org_id", params.orgId)
@@ -95,7 +99,7 @@ export async function deleteOutcomeCategoryWithReassignment(params: {
   const auth = await requireOrgAdmin(params.orgId);
   if (!auth.ok) return { error: auth.error };
 
-  const { data, error } = await auth.admin.rpc(
+  const { data, error } = await auth.supabase.rpc(
     "portal_delete_outcome_category_with_reassignment",
     {
       p_category_id: params.categoryId,
