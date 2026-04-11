@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/components/providers/org-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Trash2, ExternalLink, FileText } from "lucide-react";
+import { CreditCard, ExternalLink, FileText } from "lucide-react";
 import Link from "next/link";
 
 interface PaymentMethod {
@@ -30,10 +31,17 @@ export default function SettingsBillingPage() {
   const [loading, setLoading] = useState(true);
 
   async function loadMethods() {
-    const res = await fetch(`/api/billing/payment-methods?orgId=${organization.id}`);
-    const data = await res.json();
-    setMethods(data.methods || []);
-    setDefaultId(data.defaultId);
+    const supabase = createClient();
+    const { data, error } = await supabase.functions.invoke("portal-billing", {
+      body: { action: "list-payment-methods", orgId: organization.id },
+    });
+    if (error) {
+      setMethods([]);
+      setDefaultId(null);
+    } else {
+      setMethods(data?.methods || []);
+      setDefaultId(data?.defaultId ?? null);
+    }
     setLoading(false);
   }
 
@@ -41,32 +49,17 @@ export default function SettingsBillingPage() {
     loadMethods();
   }, [organization.id]);
 
-  async function handleRemove(methodId: string) {
-    await fetch("/api/billing/payment-methods", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ methodId }),
-    });
-    await loadMethods();
-  }
-
-  async function handleSetDefault(methodId: string) {
-    await fetch("/api/billing/payment-methods", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgId: organization.id, methodId }),
-    });
-    setDefaultId(methodId);
-  }
-
   async function handleManagePortal() {
-    const res = await fetch("/api/billing/create-portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgId: organization.id }),
+    const supabase = createClient();
+    const { data, error } = await supabase.functions.invoke("portal-billing", {
+      body: {
+        action: "create-portal-session",
+        orgId: organization.id,
+        returnUrl: window.location.href,
+      },
     });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
+    if (error || !data?.url) return;
+    window.location.href = data.url;
   }
 
   function brandLabel(brand: string) {
@@ -127,24 +120,11 @@ export default function SettingsBillingPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {method.id !== defaultId && (
-                      <button
-                        onClick={() => handleSetDefault(method.id)}
-                        className="rounded-md px-2 py-1 text-[12px] text-[rgba(0,0,0,0.55)] hover:bg-[#eeeff1] hover:text-[#242529]"
-                      >
-                        Set default
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleRemove(method.id)}
-                      className="rounded-md p-1.5 text-[rgba(0,0,0,0.35)] hover:bg-[#eeeff1] hover:text-red-500"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
                 </div>
               ))}
+              <p className="text-[12px] text-[rgba(0,0,0,0.35)]">
+                To remove or change your default card, open the Stripe customer portal below.
+              </p>
             </div>
           )}
         </div>

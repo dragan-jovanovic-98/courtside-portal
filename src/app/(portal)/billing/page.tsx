@@ -30,8 +30,8 @@ export default async function BillingPage() {
       .from("portal_subscriptions")
       .select("*")
       .eq("org_id", orgId)
-      .eq("status", "active")
-      .single(),
+      .in("status", ["active", "trialing", "past_due"])
+      .maybeSingle(),
     supabase
       .from("portal_invoices")
       .select("*")

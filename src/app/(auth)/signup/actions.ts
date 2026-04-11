@@ -1,7 +1,6 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createCustomer } from "@/lib/stripe";
 
 export async function createOrgAndUser(params: {
   authId: string;
@@ -19,7 +18,9 @@ export async function createOrgAndUser(params: {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-  // Create organization (admin client bypasses RLS)
+  // Create organization (admin client bypasses RLS). The trg_portal_enqueue_stripe_customer_create
+  // trigger will queue a Stripe customer creation job — the portal-stripe-customer-worker
+  // edge function drains the queue asynchronously.
   const { data: org, error: orgError } = await supabase
     .from("portal_organizations")
     .insert({
@@ -27,6 +28,7 @@ export async function createOrgAndUser(params: {
       slug,
       industry: params.industry,
       business_phone: params.businessPhone,
+      primary_email: params.email,
     })
     .select("id")
     .single();
@@ -35,18 +37,6 @@ export async function createOrgAndUser(params: {
     return { error: "Failed to create organization: " + orgError.message };
   }
 
-  // Create Stripe customer for this org
-  try {
-    const customer = await createCustomer(params.email, params.orgName, org.id);
-    await supabase
-      .from("portal_organizations")
-      .update({ stripe_customer_id: customer.id, primary_email: params.email })
-      .eq("id", org.id);
-  } catch {
-    // Non-fatal — Stripe customer can be created later on first billing action
-  }
-
-  // Create portal user with owner role
   const { error: userError } = await supabase.from("portal_users").insert({
     auth_id: params.authId,
     org_id: org.id,
@@ -60,13 +50,11 @@ export async function createOrgAndUser(params: {
     return { error: "Failed to create user profile: " + userError.message };
   }
 
-  // Seed default outcome categories based on industry
   await supabase.rpc("portal_seed_outcome_categories", {
     p_org_id: org.id,
     p_industry: params.industry,
   });
 
-  // Create compliance settings
   await supabase.from("portal_compliance_settings").insert({ org_id: org.id });
 
   return { success: true };

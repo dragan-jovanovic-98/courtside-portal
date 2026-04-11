@@ -196,9 +196,27 @@ export interface Booking {
   contact?: Contact;
 }
 
+export interface Plan {
+  id: string;
+  org_id: string | null;
+  name: string;
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
+  monthly_base_price_cents: number;
+  included_minutes: number;
+  overage_per_minute_cents: number;
+  setup_fee_cents: number;
+  setup_fee_covers_days: number;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Subscription {
   id: string;
   org_id: string;
+  plan_id: string | null;
   stripe_subscription_id: string | null;
   plan_name: string | null;
   price_monthly: number | null;

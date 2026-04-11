@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { UsageMeter } from "@/components/billing/usage-meter";
 import { PlanCard } from "@/components/billing/plan-card";
 import { InvoiceHistory } from "@/components/billing/invoice-history";
@@ -20,50 +21,26 @@ export function BillingPageContent({
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
 
-  async function openPortal(): Promise<{ ok: true; url: string } | { ok: false; code?: string; error: string }> {
-    const res = await fetch("/api/billing/create-portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgId }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      return { ok: false, code: data.code, error: data.error || "Failed to open billing portal" };
-    }
-    if (!data.url) {
-      return { ok: false, error: "Billing portal response missing URL" };
-    }
-    return { ok: true, url: data.url };
-  }
-
   async function handleManageBilling() {
     setBillingLoading(true);
     setBillingError(null);
     try {
-      const first = await openPortal();
-      if (first.ok) {
-        window.location.href = first.url;
-        return;
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke("portal-billing", {
+        body: {
+          action: "create-portal-session",
+          orgId,
+          returnUrl: window.location.href,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to open billing portal");
       }
-      if (first.code === "no_billing_account") {
-        // Bootstrap a Stripe customer for the org, then retry the portal call once.
-        const createRes = await fetch("/api/billing/create-customer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orgId }),
-        });
-        const createData = await createRes.json();
-        if (!createRes.ok) {
-          throw new Error(createData.error || "Failed to set up billing account");
-        }
-        const retry = await openPortal();
-        if (!retry.ok) {
-          throw new Error(retry.error);
-        }
-        window.location.href = retry.url;
-        return;
+      if (!data?.url) {
+        throw new Error("Billing portal response missing URL");
       }
-      throw new Error(first.error);
+      window.location.href = data.url;
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Something went wrong");
       setBillingLoading(false);
