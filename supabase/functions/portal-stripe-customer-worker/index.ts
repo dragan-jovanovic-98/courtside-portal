@@ -9,8 +9,10 @@
 //
 // On error: record last_error, mark failed after 5 attempts, leave as pending otherwise.
 //
-// Invocation: POST with a valid JWT (verify_jwt: true). In production this is called
-// by a pg_cron job passing the service role key. Can also be invoked manually for testing.
+// Invocation: POST with x-worker-secret header matching WORKER_SECRET env var.
+// verify_jwt: false. The edge function does its own auth via the shared secret,
+// which is the same pattern (and the same secret value) the legacy worker uses.
+// pg_cron reads the secret from vault and forwards it as x-worker-secret.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { getStripe } from "./stripe.ts";
@@ -22,6 +24,14 @@ const BATCH_SIZE = 10;
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  // Custom auth: shared-secret header check. Matches the legacy pattern so the
+  // existing vault secret can drive pg_cron invocation.
+  const expected = Deno.env.get("WORKER_SECRET");
+  const provided = req.headers.get("x-worker-secret");
+  if (!expected || provided !== expected) {
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const supabase = getServiceClient();
