@@ -1,17 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useOrganization } from "@/components/providers/org-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Trash2, Star, ExternalLink, FileText } from "lucide-react";
+import { CreditCard, Trash2, ExternalLink, FileText } from "lucide-react";
 import Link from "next/link";
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
-);
 
 interface PaymentMethod {
   id: string;
@@ -22,14 +16,6 @@ interface PaymentMethod {
 }
 
 export default function SettingsBillingPage() {
-  return (
-    <Elements stripe={stripePromise}>
-      <BillingContent />
-    </Elements>
-  );
-}
-
-function BillingContent() {
   const { organization, user } = useOrganization();
 
   if (user.role === "member" || user.role === "viewer") {
@@ -42,7 +28,6 @@ function BillingContent() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [defaultId, setDefaultId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
 
   async function loadMethods() {
     const res = await fetch(`/api/billing/payment-methods?orgId=${organization.id}`);
@@ -100,22 +85,20 @@ function BillingContent() {
               Manage credit cards used for your subscription and usage billing.
             </p>
           </div>
-          {!showAddForm && (
-            <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)} className="shrink-0 gap-1.5">
-              <CreditCard className="h-3.5 w-3.5" />
-              Add card
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={handleManagePortal} className="shrink-0 gap-1.5">
+            <CreditCard className="h-3.5 w-3.5" />
+            Add card
+          </Button>
         </div>
 
         <div className="mt-5">
           {loading ? (
             <p className="text-[13px] text-[rgba(0,0,0,0.35)]">Loading payment methods...</p>
-          ) : methods.length === 0 && !showAddForm ? (
+          ) : methods.length === 0 ? (
             <div className="flex flex-col items-center rounded-lg border border-dashed border-[#eeeff1] py-10">
               <CreditCard className="h-8 w-8 text-[rgba(0,0,0,0.2)]" />
               <p className="mt-3 text-[13px] text-[rgba(0,0,0,0.55)]">No payment methods on file.</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => setShowAddForm(true)}>
+              <Button variant="outline" size="sm" className="mt-3" onClick={handleManagePortal}>
                 Add a card
               </Button>
             </div>
@@ -164,19 +147,6 @@ function BillingContent() {
               ))}
             </div>
           )}
-
-          {showAddForm && (
-            <div className="mt-4">
-              <AddCardForm
-                orgId={organization.id}
-                onSuccess={() => {
-                  setShowAddForm(false);
-                  loadMethods();
-                }}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          )}
         </div>
       </div>
 
@@ -218,94 +188,5 @@ function BillingContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-function AddCardForm({
-  orgId,
-  onSuccess,
-  onCancel,
-}: {
-  orgId: string;
-  onSuccess: () => void;
-  onCancel: () => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-
-    setSaving(true);
-    setError(null);
-
-    const res = await fetch("/api/billing/setup-intent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgId }),
-    });
-    const { clientSecret, error: serverError } = await res.json();
-
-    if (serverError) {
-      setError(serverError);
-      setSaving(false);
-      return;
-    }
-
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      setError("Card element not found.");
-      setSaving(false);
-      return;
-    }
-
-    const { error: stripeError } = await stripe.confirmCardSetup(clientSecret, {
-      payment_method: { card: cardElement },
-    });
-
-    if (stripeError) {
-      setError(stripeError.message || "Failed to add card.");
-      setSaving(false);
-      return;
-    }
-
-    setSaving(false);
-    onSuccess();
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="rounded-lg border border-[#eeeff1] p-4 space-y-4">
-      <div>
-        <p className="text-[14px] font-medium text-[#242529]">Add a new card</p>
-        <p className="text-[13px] text-[rgba(0,0,0,0.55)]">Enter your card details below.</p>
-      </div>
-      <div className="rounded-md border border-[#eeeff1] px-3 py-3">
-        <CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: "14px",
-                color: "#18181b",
-                "::placeholder": { color: "#a1a1aa" },
-              },
-            },
-          }}
-        />
-      </div>
-      {error && (
-        <p className="text-[13px] text-red-600">{error}</p>
-      )}
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={saving || !stripe}>
-          {saving ? "Saving..." : "Add card"}
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </form>
   );
 }
