@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Label, Tooltip } from "recharts";
+import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import type { HoursChartData } from "@/app/(portal)/dashboard/actions";
 
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) {
@@ -18,10 +20,21 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 
 export function HoursPieChart({ data }: { data: HoursChartData }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (pendingIndex === null) return;
+    const t = setTimeout(() => setPendingIndex(null), 4000);
+    return () => clearTimeout(t);
+  }, [pendingIndex]);
+
   const chartData = [
     { name: "Business Hours", value: data.businessHours, color: "#242529", filter: "business" },
     { name: "After Hours", value: data.afterHours, color: "#d4d4d8", filter: "after" },
   ].filter((d) => d.value > 0);
+
+  const pendingItem = pendingIndex !== null ? chartData[pendingIndex] : null;
 
   if (data.total === 0) {
     return (
@@ -63,7 +76,17 @@ export function HoursPieChart({ data }: { data: HoursChartData }) {
               className="cursor-pointer"
               onClick={(_: unknown, index: number) => {
                 const item = chartData[index];
-                if (item) router.push(`/calls?hours=${item.filter}`);
+                if (!item) return;
+                if (!isMobile) {
+                  router.push(`/calls?hours=${item.filter}`);
+                  return;
+                }
+                if (pendingIndex === index) {
+                  router.push(`/calls?hours=${item.filter}`);
+                  setPendingIndex(null);
+                } else {
+                  setPendingIndex(index);
+                }
               }}
             >
               {chartData.map((e, i) => <Cell key={i} fill={e.color} />)}
@@ -79,6 +102,11 @@ export function HoursPieChart({ data }: { data: HoursChartData }) {
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
+        {pendingItem && (
+          <div className="mt-1 w-full rounded-md bg-[#f4f4f5] px-3 py-2 text-center text-[12px] font-medium text-[rgba(0,0,0,0.6)] md:hidden">
+            Tap <span className="text-[#242529]">{pendingItem.name}</span> again to open
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
           <button
             onClick={() => router.push("/calls?hours=business")}

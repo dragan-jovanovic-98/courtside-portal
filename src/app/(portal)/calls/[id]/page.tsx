@@ -35,7 +35,7 @@ export default function CallDetailPage({
       const { data: callData, error: callError } = await supabase
         .from("portal_calls")
         .select(
-          "*, agent:portal_agents(id, name, agent_type), outcome_category:portal_outcome_categories(id, name, impact_tier, close_likelihood), contact:portal_contacts!portal_calls_contact_id_fkey(id, phone_number, first_name, last_name, total_calls)"
+          "*, agent:portal_agents(id, name, agent_type), outcome_category:portal_outcome_categories(id, name, close_likelihood), contact:portal_contacts!portal_calls_contact_id_fkey(id, phone_number, first_name, last_name, total_calls)"
         )
         .eq("id", id)
         .single();

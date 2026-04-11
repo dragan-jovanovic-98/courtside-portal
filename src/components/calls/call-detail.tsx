@@ -125,15 +125,10 @@ export function CallDetail({ call }: { call: Call }) {
         {/* Main content */}
         <div className="space-y-0 lg:col-span-2">
           {/* Summary */}
-          {(call.summary_one_line || call.ai_summary) && (
+          {call.ai_summary && (
             <div className="pb-6">
               <h2 className="text-[12px] font-medium uppercase text-[rgba(0,0,0,0.45)] tracking-[-0.12px]">Summary</h2>
-              {call.summary_one_line && (
-                <p className="mt-2 text-[14px] font-medium text-[#242529]">{call.summary_one_line}</p>
-              )}
-              {call.ai_summary && (
-                <p className="mt-1.5 text-[13px] leading-relaxed text-[rgba(0,0,0,0.55)]">{call.ai_summary}</p>
-              )}
+              <p className="mt-2 text-[13px] leading-relaxed text-[rgba(0,0,0,0.55)]">{call.ai_summary}</p>
             </div>
           )}
 

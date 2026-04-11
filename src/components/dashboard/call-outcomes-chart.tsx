@@ -1,18 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart2 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { getOutcomeColor, DEFAULT_OUTCOME_COLORS } from "@/lib/constants";
+import { getOutcomeColor } from "@/lib/constants";
+import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import type { OutcomeChartData } from "@/app/(portal)/dashboard/actions";
-
-const TIER_LABELS: Record<string, string> = {
-  high: "Converted",
-  medium: "Engaged",
-  low: "Dropped off",
-};
 
 function fmtCurrency(v: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(v);
@@ -34,6 +30,16 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 
 export function CallOutcomesChart({ data }: { data: OutcomeChartData[] }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (pendingIndex === null) return;
+    const t = setTimeout(() => setPendingIndex(null), 4000);
+    return () => clearTimeout(t);
+  }, [pendingIndex]);
+
+  const pendingItem = pendingIndex !== null ? data[pendingIndex] : null;
 
   if (data.length === 0) {
     return (
@@ -54,21 +60,10 @@ export function CallOutcomesChart({ data }: { data: OutcomeChartData[] }) {
 
   return (
     <div className="rounded-lg border border-[#eeeff1] bg-white h-full flex flex-col">
-      <div className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="px-4 py-4 sm:px-5">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">
           Call Outcomes
         </p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.35)] sm:gap-4">
-          {Object.entries(TIER_LABELS).map(([tier, label]) => (
-            <span key={tier} className="flex items-center gap-1.5">
-              <span
-                className="h-2 w-2 rounded-[2px]"
-                style={{ backgroundColor: DEFAULT_OUTCOME_COLORS[tier] }}
-              />
-              {label}
-            </span>
-          ))}
-        </div>
       </div>
       <div className="flex-1 px-2 pb-4 sm:px-4">
         <ResponsiveContainer width="100%" height={chartHeight}>
@@ -91,13 +86,28 @@ export function CallOutcomesChart({ data }: { data: OutcomeChartData[] }) {
               className="cursor-pointer"
               onClick={(_: unknown, index: number) => {
                 const item = data[index];
-                if (item) router.push(`/calls?outcome=${item.id}`);
+                if (!item) return;
+                if (!isMobile) {
+                  router.push(`/calls?outcome=${item.id}`);
+                  return;
+                }
+                if (pendingIndex === index) {
+                  router.push(`/calls?outcome=${item.id}`);
+                  setPendingIndex(null);
+                } else {
+                  setPendingIndex(index);
+                }
               }}
             >
-              {data.map((e, i) => <Cell key={i} fill={e.color || DEFAULT_OUTCOME_COLORS[e.impactTier] || DEFAULT_OUTCOME_COLORS.low} />)}
+              {data.map((e, i) => <Cell key={i} fill={getOutcomeColor(e)} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        {pendingItem && (
+          <div className="mx-2 -mt-1 mb-1 rounded-md bg-[#f4f4f5] px-3 py-2 text-center text-[12px] font-medium text-[rgba(0,0,0,0.6)] md:hidden">
+            Tap <span className="text-[#242529]">{pendingItem.name}</span> again to open
+          </div>
+        )}
       </div>
     </div>
   );

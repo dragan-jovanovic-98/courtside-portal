@@ -23,13 +23,21 @@ const presets = [
 export function DateRangeFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeRange = searchParams.get("range") || "30d";
+  const urlRange = searchParams.get("range") || "30d";
+  const [pendingRange, setPendingRange] = useState<string | null>(null);
+  const activeRange = pendingRange ?? urlRange;
   const [range, setRange] = useState<DateRange | undefined>();
   const [desktopOpen, setDesktopOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Clear optimistic state once the URL catches up
+  useEffect(() => {
+    if (pendingRange && urlRange === pendingRange) setPendingRange(null);
+  }, [urlRange, pendingRange]);
+
   function setPreset(value: string) {
+    setPendingRange(value);
     const params = new URLSearchParams(searchParams.toString());
     params.set("range", value);
     params.delete("from");
@@ -90,7 +98,7 @@ export function DateRangeFilter() {
               key={preset.value}
               onClick={() => setPreset(preset.value)}
               className={cn(
-                "flex-1 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors sm:flex-initial sm:py-1",
+                "flex-1 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors active:bg-white active:shadow-sm sm:flex-initial sm:py-1",
                 activeRange === preset.value
                   ? "bg-white text-[#242529] shadow-sm"
                   : "text-[rgba(0,0,0,0.45)] hover:text-[#242529]"
@@ -113,7 +121,7 @@ export function DateRangeFilter() {
               }
             }}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors sm:flex-initial sm:py-1",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors active:bg-white active:shadow-sm sm:flex-initial sm:py-1",
               activeRange === "custom" || desktopOpen
                 ? "bg-white text-[#242529] shadow-sm"
                 : "text-[rgba(0,0,0,0.45)] hover:text-[#242529]"

@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useOrganization } from "@/components/providers/org-provider";
 import { getNavItems } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/client";
+import { useSwipeDismiss } from "@/lib/hooks/use-swipe-dismiss";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const icons = {
@@ -53,6 +54,10 @@ export function MobileNav({ trigger }: { trigger: React.ReactNode }) {
     () => getNavItems(user.role, [referralItem]).length > 0,
     [user.role]
   );
+  const swipeHandlers = useSwipeDismiss({
+    onDismiss: () => setOpen(false),
+    direction: "left",
+  });
 
   // Close drawer whenever the route changes
   useEffect(() => {
@@ -128,6 +133,7 @@ export function MobileNav({ trigger }: { trigger: React.ReactNode }) {
         side="left"
         className="w-[82%] max-w-[320px] bg-[#fbfbfb] p-0 flex flex-col gap-0"
         showCloseButton={false}
+        {...swipeHandlers}
       >
         {/* Workspace header */}
         <div className="safe-area-top flex h-14 items-center gap-2.5 border-b border-[#eeeff1] px-4">

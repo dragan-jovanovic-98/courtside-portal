@@ -229,13 +229,26 @@ export default function AgentsSettingsPage() {
 
       {/* Request new agent */}
       <div className="py-10">
-        <h2 className="text-[14px] font-semibold text-[#242529]">Need another agent?</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-[14px] font-semibold text-[#242529]">Need another agent?</h2>
+          <span className="rounded-full bg-[#eeeff1] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[rgba(0,0,0,0.45)]">
+            Coming soon
+          </span>
+        </div>
         <p className="mt-1.5 text-[13px] text-[rgba(0,0,0,0.55)]">
           Contact the Courtside AI team to provision a new agent for your organization.
         </p>
-        <Button variant="outline" size="sm" className="mt-4" disabled>
-          Request new agent
-        </Button>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" disabled>
+            Request new agent
+          </Button>
+          <a
+            href={`mailto:team@courtside-ai.com?subject=${encodeURIComponent(`Request new agent for ${organization.name}`)}`}
+            className="text-[13px] font-medium text-[#242529] underline underline-offset-2 hover:text-[rgba(0,0,0,0.65)]"
+          >
+            Or email us directly
+          </a>
+        </div>
       </div>
     </div>
   );

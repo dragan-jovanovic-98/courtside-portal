@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
   if (!org?.stripe_customer_id) {
     return NextResponse.json(
-      { error: "No billing account found" },
+      { error: "No billing account found", code: "no_billing_account" },
       { status: 400 }
     );
   }

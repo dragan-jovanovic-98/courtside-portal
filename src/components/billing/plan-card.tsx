@@ -8,9 +8,10 @@ import type { Subscription } from "@/lib/types";
 interface PlanCardProps {
   subscription: Subscription | null;
   onManageBilling: () => void;
+  loading?: boolean;
 }
 
-export function PlanCard({ subscription, onManageBilling }: PlanCardProps) {
+export function PlanCard({ subscription, onManageBilling, loading = false }: PlanCardProps) {
   const { organization } = useOrganization();
   const tz = organization.timezone;
 
@@ -55,10 +56,14 @@ export function PlanCard({ subscription, onManageBilling }: PlanCardProps) {
             )}
 
             <div className="pt-1">
-              <button onClick={onManageBilling} className="flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-medium bg-white border border-[#e5e5e5] text-[#525866] hover:bg-[#f8f9fa] transition-colors">
+              <button
+                onClick={onManageBilling}
+                disabled={loading}
+                className="flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-medium bg-white border border-[#e5e5e5] text-[#525866] hover:bg-[#f8f9fa] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 <CreditCard className="h-3.5 w-3.5" />
-                Manage Billing
-                <ExternalLink className="h-3 w-3 text-[rgba(0,0,0,0.3)]" />
+                {loading ? "Opening..." : "Manage Billing"}
+                {!loading && <ExternalLink className="h-3 w-3 text-[rgba(0,0,0,0.3)]" />}
               </button>
             </div>
           </div>

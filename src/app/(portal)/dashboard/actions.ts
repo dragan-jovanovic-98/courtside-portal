@@ -118,7 +118,6 @@ export interface OutcomeChartData {
   id: string;
   name: string;
   count: number;
-  impactTier: string;
   color: string | null;
   estimatedValue: number;
 }
@@ -151,7 +150,7 @@ export async function getDashboardCharts(filters: DashboardFilters) {
 
   const { data: outcomes } = await supabase
     .from("portal_outcome_categories")
-    .select("id, name, impact_tier, color, close_likelihood")
+    .select("id, name, color, close_likelihood")
     .eq("org_id", filters.orgId)
     .order("sort_order");
 
@@ -178,7 +177,6 @@ export async function getDashboardCharts(filters: DashboardFilters) {
     id: o.id,
     name: o.name,
     count: outcomeCounts.get(o.id) || 0,
-    impactTier: o.impact_tier,
     color: o.color,
     estimatedValue: (outcomeCounts.get(o.id) || 0) * avgOrderValue * (o.close_likelihood / 100),
   })).filter((d) => d.count > 0);

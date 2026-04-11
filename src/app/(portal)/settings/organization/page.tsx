@@ -310,7 +310,6 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
     return JSON.stringify(cats.map((c) => ({
       name: c.name,
       description: c.description,
-      impact_tier: c.impact_tier,
       color: c.color,
       sort_order: c.sort_order,
       close_likelihood: c.close_likelihood,
@@ -360,7 +359,6 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
       org_id: orgId,
       name: "New Category",
       description: null,
-      impact_tier: "low",
       color: null,
       sort_order: categories.length + 1,
       close_likelihood: 0,
@@ -450,7 +448,6 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
         id: isLocalOnly(c.id) ? null : c.id,
         name: c.name,
         description: c.description || null,
-        impact_tier: c.impact_tier,
         color: c.color,
         sort_order: i + 1,
         close_likelihood: c.close_likelihood,
@@ -499,21 +496,21 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
 
           return (
             <div key={cat.id} className="rounded-lg border border-[#eeeff1]">
-              {/* Main row */}
+              {/* Main row — wraps to two rows on mobile, single row on desktop */}
               <div
-                className="flex cursor-pointer items-center gap-2 p-2.5"
+                className="flex cursor-pointer flex-wrap items-center gap-2 p-2.5 sm:flex-nowrap"
                 onClick={() => toggleExpand(cat.id)}
               >
                 <ChevronDown
                   className={cn(
-                    "h-3.5 w-3.5 shrink-0 text-[rgba(0,0,0,0.35)] transition-transform",
+                    "order-1 h-3.5 w-3.5 shrink-0 text-[rgba(0,0,0,0.35)] transition-transform",
                     isExpanded && "rotate-180"
                   )}
                 />
 
                 {canEdit && (
                   <div
-                    className="flex flex-col gap-0.5"
+                    className="order-5 flex flex-col gap-0.5 sm:order-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
@@ -534,7 +531,7 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
                 )}
 
                 {/* Color swatch */}
-                <div onClick={(e) => e.stopPropagation()}>
+                <div className="order-6 sm:order-3" onClick={(e) => e.stopPropagation()}>
                   <Popover>
                     <PopoverTrigger
                       render={
@@ -572,7 +569,7 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
 
                 {/* Name */}
                 <div
-                  className="min-w-0 flex-1"
+                  className="order-2 min-w-0 flex-1 sm:order-4"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Input
@@ -583,27 +580,9 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
                   />
                 </div>
 
-                {/* Impact tier */}
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Select
-                    value={cat.impact_tier}
-                    onValueChange={(v) => updateCategory(cat.id, { impact_tier: (v ?? cat.impact_tier) as "high" | "medium" | "low" })}
-                    disabled={!canEdit}
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Close likelihood */}
                 <div
-                  className="flex items-center gap-1"
+                  className="order-7 flex items-center gap-1 sm:order-5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Input
@@ -624,11 +603,14 @@ function OutcomeCategoriesManager({ orgId, canEdit, onDirtyChange }: { orgId: st
                       e.stopPropagation();
                       void startDelete(cat);
                     }}
-                    className="shrink-0 text-[rgba(0,0,0,0.35)] hover:text-red-500"
+                    className="order-3 shrink-0 text-[rgba(0,0,0,0.35)] hover:text-red-500 sm:order-6"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
+
+                {/* Line break on mobile between the two rows */}
+                <div className="order-4 h-0 basis-full sm:hidden" aria-hidden />
               </div>
 
               {/* Expanded description */}

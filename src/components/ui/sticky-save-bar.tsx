@@ -38,7 +38,7 @@ export function StickySaveBar({
       <div
         aria-hidden
         className={cn(
-          "h-[68px] safe-area-bottom",
+          "h-[76px] md:h-[68px] safe-area-bottom",
           mode === "mobile" && "md:hidden"
         )}
       />
@@ -46,30 +46,30 @@ export function StickySaveBar({
         role="region"
         aria-label="Unsaved changes"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 border-t border-[#eeeff1] bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80 px-4 py-3 safe-area-bottom",
+          "fixed inset-x-0 bottom-0 z-40 border-t border-[#eeeff1] bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80 px-4 py-3.5 md:py-3 safe-area-bottom",
           "flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]",
           mode === "mobile" && "md:hidden",
           className
         )}
       >
-        <span className="flex-1 truncate text-[13px] text-[rgba(0,0,0,0.6)]">
+        <span className="flex-1 truncate text-[14px] md:text-[13px] text-[rgba(0,0,0,0.6)]">
           You have unsaved changes
         </span>
         <div className="flex shrink-0 items-center gap-2">
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={onCancel}
             disabled={saving}
+            className="h-11 md:h-9 px-4 md:px-3 text-[14px] md:text-[13px]"
           >
             {cancelLabel}
           </Button>
           <Button
             type="button"
-            size="sm"
             onClick={onSave}
             disabled={saving}
+            className="h-11 md:h-9 px-4 md:px-3 text-[14px] md:text-[13px]"
           >
             {saving ? "Saving..." : saveLabel}
           </Button>

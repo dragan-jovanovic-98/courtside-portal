@@ -310,7 +310,7 @@ export default function TeamSettingsPage() {
             </p>
 
             <form onSubmit={handleInvite} className="mt-6">
-              <div className="flex items-end gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Label htmlFor="inviteEmail" className="text-[13px] text-[rgba(0,0,0,0.55)]">
                     Email address
@@ -324,7 +324,7 @@ export default function TeamSettingsPage() {
                     required
                   />
                 </div>
-                <div className="w-[130px] space-y-1.5">
+                <div className="w-full space-y-1.5 sm:w-[130px]">
                   <Label className="text-[13px] text-[rgba(0,0,0,0.55)]">Role</Label>
                   <Select value={inviteRole} onValueChange={(v) => setInviteRole(v ?? "member")}>
                     <SelectTrigger className="w-full">
@@ -337,7 +337,7 @@ export default function TeamSettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" disabled={inviting} size="sm" className="shrink-0">
+                <Button type="submit" disabled={inviting} size="sm" className="w-full shrink-0 sm:w-auto">
                   {inviting ? "Sending..." : "Send invite"}
                 </Button>
               </div>

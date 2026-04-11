@@ -15,19 +15,6 @@ export const SENTIMENT_ICONS: Record<string, string> = {
 
 export const ENGAGEMENT_LEVELS = ["high", "medium", "low", "disengaged"] as const;
 
-export const IMPACT_TIER_COLORS: Record<string, string> = {
-  high: "bg-emerald-500",
-  medium: "bg-amber-500",
-  low: "bg-zinc-400",
-};
-
-// Default color for outcomes when no custom color is set, keyed by impact tier
-export const DEFAULT_OUTCOME_COLORS: Record<string, string> = {
-  high: "#242529",
-  medium: "#d97706",
-  low: "#d4d4d8",
-};
-
 // Preset color palette for outcome category picker
 export const OUTCOME_COLOR_PRESETS = [
   { value: "#242529", label: "Black" },
@@ -42,8 +29,8 @@ export const OUTCOME_COLOR_PRESETS = [
   { value: "#65a30d", label: "Lime" },
 ] as const;
 
-export function getOutcomeColor(category: { color?: string | null; impact_tier?: string }): string {
-  return category.color || DEFAULT_OUTCOME_COLORS[category.impact_tier ?? "low"] || "#d4d4d8";
+export function getOutcomeColor(category: { color?: string | null }): string {
+  return category.color || "#d4d4d8";
 }
 
 export const CHART_COLORS = {

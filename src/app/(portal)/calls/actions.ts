@@ -38,7 +38,7 @@ export async function getCalls(filters: CallFilters): Promise<CallsResult> {
   let query = supabase
     .from("portal_calls")
     .select(
-      "*, agent:portal_agents(id, name), outcome_category:portal_outcome_categories(id, name, impact_tier, close_likelihood, color)",
+      "*, agent:portal_agents(id, name), outcome_category:portal_outcome_categories(id, name, close_likelihood, color)",
       { count: "exact" }
     )
     .eq("org_id", filters.orgId);
@@ -141,7 +141,7 @@ export async function getCallById(callId: string, orgId: string) {
   const { data: call } = await supabase
     .from("portal_calls")
     .select(
-      "*, agent:portal_agents(id, name, agent_type), outcome_category:portal_outcome_categories(id, name, impact_tier, close_likelihood, color), contact:portal_contacts!portal_calls_contact_id_fkey(id, phone_number, first_name, last_name, total_calls)"
+      "*, agent:portal_agents(id, name, agent_type), outcome_category:portal_outcome_categories(id, name, close_likelihood, color), contact:portal_contacts!portal_calls_contact_id_fkey(id, phone_number, first_name, last_name, total_calls)"
     )
     .eq("id", callId)
     .eq("org_id", orgId)

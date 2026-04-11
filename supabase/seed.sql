@@ -40,6 +40,10 @@ DECLARE
   v_started TIMESTAMPTZ;
   v_duration INTEGER;
   v_rand DOUBLE PRECISION;
+  v_service TEXT;
+  v_caller_name TEXT;
+  v_transcript JSONB;
+  v_transcript_text TEXT;
 BEGIN
 
   -- Organization
@@ -99,12 +103,78 @@ BEGIN
     v_duration := (30 + random() * 570)::INTEGER; -- 30s to 10min
     v_outcome := v_outcomes[1 + (random() * (array_length(v_outcomes, 1) - 1))::INTEGER];
     v_call_id := gen_random_uuid();
+    v_service := v_services[1 + (random() * (array_length(v_services, 1) - 1))::INTEGER];
+    v_caller_name := v_names[1 + (v_i % array_length(v_names, 1))];
+
+    -- Build a synthetic transcript appropriate to the outcome. Variants:
+    --   Booked (court/appointment): 8 entries, full-book dialogue
+    --   Engaged (membership/quote/callback/info/message): 5-6 entries
+    --   Dropped (wrong number/spam): 2 short entries
+    IF v_outcome = v_oc_court OR v_outcome = v_oc_booked THEN
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', 'Hi, I''d like to book a ' || v_service || ' for this weekend.', 'timestamp', '00:07'),
+        jsonb_build_object('role', 'agent', 'content', 'Absolutely, what day and time works best for you?', 'timestamp', '00:13'),
+        jsonb_build_object('role', 'caller', 'content', 'Saturday around 3pm if you have anything available.', 'timestamp', '00:18'),
+        jsonb_build_object('role', 'agent', 'content', 'Let me check. I have a slot at 3pm for 60 minutes. Should I go ahead and book it?', 'timestamp', '00:26'),
+        jsonb_build_object('role', 'caller', 'content', 'Yes, please. Can I get a confirmation by text?', 'timestamp', '00:32'),
+        jsonb_build_object('role', 'agent', 'content', 'Of course. You''ll get a confirmation text at this number in just a moment. Anything else I can help with?', 'timestamp', '00:40'),
+        jsonb_build_object('role', 'caller', 'content', 'No, that''s all. Thanks so much!', 'timestamp', '00:46')
+      );
+    ELSIF v_outcome = v_oc_membership THEN
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', 'I''m interested in becoming a member. Can you tell me about your plans?', 'timestamp', '00:08'),
+        jsonb_build_object('role', 'agent', 'content', 'Sure. We have monthly and annual plans, with discounts on court bookings, group lessons, and events. Do you have a preference?', 'timestamp', '00:18'),
+        jsonb_build_object('role', 'caller', 'content', 'Monthly is probably better to start. What does that include?', 'timestamp', '00:25'),
+        jsonb_build_object('role', 'agent', 'content', 'Monthly membership is $49 and includes unlimited booking access and 15% off lessons. I can email you the details if you''d like.', 'timestamp', '00:34'),
+        jsonb_build_object('role', 'caller', 'content', 'Yes please, that would be great.', 'timestamp', '00:39')
+      );
+    ELSIF v_outcome = v_oc_quote THEN
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', 'Hi, I''m looking to get a quote for a ' || v_service || ' rental for a group of 10.', 'timestamp', '00:08'),
+        jsonb_build_object('role', 'agent', 'content', 'Happy to help. How long would you need the facility, and on what date?', 'timestamp', '00:16'),
+        jsonb_build_object('role', 'caller', 'content', 'Probably two hours, next Friday evening.', 'timestamp', '00:22'),
+        jsonb_build_object('role', 'agent', 'content', 'Got it. I''ll put together a quote and email it to you within the hour. Is there a good address?', 'timestamp', '00:31')
+      );
+    ELSIF v_outcome = v_oc_callback OR v_outcome = v_oc_message THEN
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', 'Hi, I was hoping to speak with someone about ' || v_service || '. Is anyone available?', 'timestamp', '00:09'),
+        jsonb_build_object('role', 'agent', 'content', 'The team is tied up right now, but I can take a message and have someone call you back. Can I get your name and the best number to reach you?', 'timestamp', '00:19'),
+        jsonb_build_object('role', 'caller', 'content', 'Sure, it''s ' || v_caller_name || '. The number you have is fine.', 'timestamp', '00:26'),
+        jsonb_build_object('role', 'agent', 'content', 'Got it. Someone will get back to you by end of day. Thanks for calling!', 'timestamp', '00:33')
+      );
+    ELSIF v_outcome = v_oc_info THEN
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', 'What are your hours on the weekend?', 'timestamp', '00:06'),
+        jsonb_build_object('role', 'agent', 'content', 'We''re open Saturday and Sunday from 8am to 10pm. Anything else you''d like to know?', 'timestamp', '00:13'),
+        jsonb_build_object('role', 'caller', 'content', 'No, that''s all I needed. Thanks!', 'timestamp', '00:17')
+      );
+    ELSIF v_outcome = v_oc_wrong THEN
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', 'Oh sorry, wrong number.', 'timestamp', '00:05')
+      );
+    ELSE -- Spam or anything else
+      v_transcript := jsonb_build_array(
+        jsonb_build_object('role', 'agent', 'content', 'Thanks for calling Ace Sports Complex. How can I help?', 'timestamp', '00:02'),
+        jsonb_build_object('role', 'caller', 'content', '...', 'timestamp', '00:04')
+      );
+    END IF;
+
+    -- Concatenate content for full-text search
+    SELECT string_agg(entry->>'content', ' ')
+    INTO v_transcript_text
+    FROM jsonb_array_elements(v_transcript) AS entry;
 
     INSERT INTO portal_calls (
       id, org_id, agent_id, direction, status, outcome_category_id,
       caller_number, caller_name, started_at, ended_at, duration_seconds,
       sentiment, sentiment_score, engagement_level, outcome_confidence,
-      ai_summary, summary_one_line
+      ai_summary, summary_one_line, transcript, transcript_text
     ) VALUES (
       v_call_id, v_org_id,
       CASE WHEN random() > 0.3 THEN v_agent1_id ELSE v_agent2_id END,
@@ -112,7 +182,7 @@ BEGIN
       v_statuses[1 + (random() * (array_length(v_statuses, 1) - 1))::INTEGER],
       v_outcome,
       v_phones[1 + (v_i % array_length(v_phones, 1))],
-      v_names[1 + (v_i % array_length(v_names, 1))],
+      v_caller_name,
       v_started,
       v_started + (v_duration || ' seconds')::INTERVAL,
       v_duration,
@@ -120,8 +190,10 @@ BEGIN
       (random() * 2 - 1)::NUMERIC(3,2),
       v_engagement[1 + (random() * (array_length(v_engagement, 1) - 1))::INTEGER],
       (0.5 + random() * 0.5)::NUMERIC(3,2),
-      'Caller inquired about ' || v_services[1 + (random() * (array_length(v_services, 1) - 1))::INTEGER] || ' availability. Agent provided information and assisted with booking.',
-      v_names[1 + (v_i % array_length(v_names, 1))] || ' called about ' || v_services[1 + (random() * (array_length(v_services, 1) - 1))::INTEGER]
+      'Caller inquired about ' || v_service || ' availability. Agent provided information and assisted with booking.',
+      v_caller_name || ' called about ' || v_service,
+      v_transcript,
+      v_transcript_text
     );
 
     -- Add some call actions for booked outcomes

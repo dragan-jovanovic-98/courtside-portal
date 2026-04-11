@@ -4,7 +4,6 @@ export type CallStatus = "completed" | "missed" | "voicemail" | "abandoned" | "t
 export type AgentStatus = "active" | "pending" | "inactive";
 export type BookingStatus = "scheduled" | "confirmed" | "cancelled" | "completed" | "no_show";
 export type Sentiment = "positive" | "neutral" | "negative";
-export type ImpactTier = "high" | "medium" | "low";
 
 export interface Organization {
   id: string;
@@ -96,7 +95,6 @@ export interface OutcomeCategory {
   org_id: string;
   name: string;
   description: string | null;
-  impact_tier: ImpactTier;
   color: string | null;
   sort_order: number;
   close_likelihood: number;

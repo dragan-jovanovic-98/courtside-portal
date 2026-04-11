@@ -2,13 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { OutcomeCategory, ImpactTier } from "@/lib/types";
+import type { OutcomeCategory } from "@/lib/types";
 
 export interface OutcomeCategoryInput {
   id: string | null;
   name: string;
   description: string | null;
-  impact_tier: ImpactTier;
   color: string | null;
   sort_order: number;
   close_likelihood: number;
@@ -57,7 +56,6 @@ export async function saveOutcomeCategories(params: {
     id: isRealUuid(c.id) ? c.id : null,
     name: c.name,
     description: c.description,
-    impact_tier: c.impact_tier,
     color: c.color,
     sort_order: i + 1,
     close_likelihood: c.close_likelihood,

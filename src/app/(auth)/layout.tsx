@@ -22,7 +22,7 @@ export default function AuthLayout({
           </div>
         </div>
         <div className="flex flex-1 flex-col px-6 pb-10 sm:px-10 sm:pb-10 sm:pt-2 safe-area-bottom">
-          <div className="mt-2 sm:mt-6">{children}</div>
+          <div className="my-auto sm:my-0 sm:mt-6">{children}</div>
         </div>
       </div>
     </div>

@@ -65,9 +65,6 @@ export default function SettingsLayout({
   }, [filteredTabs]);
 
   const isIndex = pathname === "/settings";
-  const currentLabel = useMemo(() => {
-    return filteredTabs.find((t) => t.href === pathname)?.label ?? "";
-  }, [filteredTabs, pathname]);
 
   return (
     <div className="flex min-w-0 gap-10">
@@ -104,7 +101,7 @@ export default function SettingsLayout({
       <div className="min-w-0 flex-1">
         {/* Mobile back-to-settings header (only on sub-routes) */}
         {!isIndex && (
-          <div className="md:hidden -mt-1 mb-4 flex items-center gap-1">
+          <div className="md:hidden -mt-1 mb-4 flex items-center">
             <Link
               href="/settings"
               className="flex h-9 items-center gap-1 -ml-2 pl-1 pr-2 rounded-md text-[14px] font-medium text-[rgba(0,0,0,0.55)] active:bg-[#eeeff1]"
@@ -112,11 +109,6 @@ export default function SettingsLayout({
               <ChevronLeft className="h-4 w-4" />
               Settings
             </Link>
-            {currentLabel && (
-              <span className="ml-auto text-[12px] font-medium text-[rgba(0,0,0,0.4)]">
-                {currentLabel}
-              </span>
-            )}
           </div>
         )}
         {children}

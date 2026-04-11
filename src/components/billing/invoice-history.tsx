@@ -41,12 +41,12 @@ export function InvoiceHistory({ invoices }: { invoices: Invoice[] }) {
             Invoice History
           </p>
         </div>
-        <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
           <Receipt className="h-10 w-10 text-[rgba(0,0,0,0.15)]" />
           <p className="mt-4 text-[14px] font-medium text-[#242529]">
             No invoices yet
           </p>
-          <p className="mt-1 text-[13px] text-[rgba(0,0,0,0.55)]">
+          <p className="mt-1 max-w-[280px] text-[13px] text-[rgba(0,0,0,0.55)]">
             Your billing history will appear here after your first charge.
           </p>
         </div>
