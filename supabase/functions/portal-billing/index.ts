@@ -20,8 +20,10 @@ import Stripe from "npm:stripe@17.5.0";
 import { getStripe } from "./stripe.ts";
 import {
   AuthError,
+  CORS_HEADERS,
   errorResponse,
   getServiceClient,
+  hasWorkerSecret,
   jsonResponse,
   requireOrgRole,
   requireSuperAdmin,
@@ -31,8 +33,13 @@ import {
 type JsonBody = Record<string, any>;
 
 serve(async (req: Request) => {
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
+    return new Response("Method Not Allowed", { status: 405, headers: CORS_HEADERS });
   }
 
   let body: JsonBody;
@@ -328,8 +335,10 @@ async function refreshUsage(req: Request, body: JsonBody): Promise<Response> {
     return jsonResponse({ refreshed: 1, orgs: [{ orgId, updated: count }] });
   }
 
-  // All-orgs mode: super_admin only
-  await requireSuperAdmin(req);
+  // All-orgs mode: super_admin or worker-secret (for cron invocation)
+  if (!hasWorkerSecret(req)) {
+    await requireSuperAdmin(req);
+  }
 
   const supabase = getServiceClient();
   const { data: activeSubs } = await supabase
@@ -346,26 +355,67 @@ async function refreshUsage(req: Request, body: JsonBody): Promise<Response> {
   return jsonResponse({ refreshed: results.length, orgs: results });
 }
 
+// Compute the current billing cycle window anchored to the subscription's
+// created_at day-of-month. Cycles roll over monthly on the anchor day. For
+// anchor days beyond the end of a given month (e.g. 31 in Feb), the cycle
+// boundary is clamped to the last day of that month.
+export function getCurrentCycleWindow(
+  anchorDate: Date,
+  now: Date = new Date(),
+): { start: Date; end: Date } {
+  let cycleStart = new Date(anchorDate);
+  let cycleEnd = addMonthsPreservingEndOfMonth(cycleStart, 1);
+
+  while (now.getTime() >= cycleEnd.getTime()) {
+    cycleStart = cycleEnd;
+    cycleEnd = addMonthsPreservingEndOfMonth(cycleStart, 1);
+  }
+
+  return { start: cycleStart, end: cycleEnd };
+}
+
+function addMonthsPreservingEndOfMonth(date: Date, months: number): Date {
+  const anchorDay = date.getUTCDate();
+  const result = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth() + months,
+    1,
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  ));
+  const lastDayOfTargetMonth = new Date(Date.UTC(
+    result.getUTCFullYear(),
+    result.getUTCMonth() + 1,
+    0,
+  )).getUTCDate();
+  result.setUTCDate(Math.min(anchorDay, lastDayOfTargetMonth));
+  return result;
+}
+
 async function refreshOrgUsage(orgId: string): Promise<number> {
   const supabase = getServiceClient();
 
   const { data: sub } = await supabase
     .from("portal_subscriptions")
-    .select("id, current_period_start, current_period_end")
+    .select("id, created_at")
     .eq("org_id", orgId)
     .in("status", ["active", "trialing", "past_due"])
     .maybeSingle();
 
   if (!sub) return 0;
-  if (!sub.current_period_start || !sub.current_period_end) return 0;
 
-  // Sum duration_seconds from portal_calls in the active period
+  // Anchor-day cycle: [start, end) where start is the most recent anchor day
+  // on or before now, and end is the next anchor day after now.
+  const { start, end } = getCurrentCycleWindow(new Date(sub.created_at));
+
   const { data: calls } = await supabase
     .from("portal_calls")
     .select("duration_seconds")
     .eq("org_id", orgId)
-    .gte("started_at", sub.current_period_start)
-    .lt("started_at", sub.current_period_end);
+    .gte("started_at", start.toISOString())
+    .lt("started_at", end.toISOString());
 
   const totalSeconds = (calls ?? []).reduce(
     (acc: number, c: { duration_seconds: number | null }) =>
@@ -390,25 +440,45 @@ async function refreshOrgUsage(orgId: string): Promise<number> {
 // For each subscription past current_period_end: refresh usage, compute overage,
 // create a Stripe Invoice Item if overage > 0.
 async function closePeriod(req: Request, body: JsonBody): Promise<Response> {
-  await requireSuperAdmin(req);
+  // super_admin OR worker-secret (for cron invocation)
+  if (!hasWorkerSecret(req)) {
+    await requireSuperAdmin(req);
+  }
 
   const { subscriptionId } = body; // optional: close a specific sub only
   const stripe = getStripe();
   const supabase = getServiceClient();
 
+  // Fetch all active subs with their plans. We filter in JS for subs whose
+  // cycle just rolled over (cycle start is today), since Postgres doesn't
+  // know about the anchor-day logic.
   const query = supabase
     .from("portal_subscriptions")
     .select(`
-      id, org_id, plan_id, stripe_subscription_id, current_period_start, current_period_end,
+      id, org_id, plan_id, stripe_subscription_id, created_at,
       portal_plans!plan_id ( included_minutes, overage_per_minute_cents, currency, name )
     `)
     .in("status", ["active", "trialing", "past_due"]);
 
-  const { data: subs, error } = subscriptionId
+  const { data: allSubs, error } = subscriptionId
     ? await query.eq("id", subscriptionId)
-    : await query.lte("current_period_end", new Date().toISOString());
+    : await query;
 
   if (error) throw new Error(`Subscription lookup failed: ${error.message}`);
+
+  // When invoked without subscriptionId, only close subs whose cycle just rolled
+  // over (cycle start is today). With subscriptionId, close that specific sub
+  // regardless — useful for manual testing.
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const subs = subscriptionId
+    ? allSubs
+    : (allSubs ?? []).filter((s) => {
+      const { start } = getCurrentCycleWindow(new Date(s.created_at));
+      const startDay = new Date(start);
+      startDay.setUTCHours(0, 0, 0, 0);
+      return startDay.getTime() === today.getTime();
+    });
 
   const results: Array<{
     subscriptionId: string;
@@ -421,16 +491,33 @@ async function closePeriod(req: Request, body: JsonBody): Promise<Response> {
   }> = [];
 
   for (const sub of subs ?? []) {
-    // Refresh usage first
-    await refreshOrgUsage(sub.org_id);
+    // When closing a specific subscription manually, we close the CURRENT
+    // cycle's usage. When closing via cron (cycle just rolled over), we close
+    // the PREVIOUS cycle's usage (which covers the full month that just ended).
+    const { start: currentCycleStart } = getCurrentCycleWindow(new Date(sub.created_at));
+    const targetCycleStart = subscriptionId
+      ? currentCycleStart
+      : addMonthsPreservingEndOfMonth(currentCycleStart, -1);
+    const targetCycleEnd = subscriptionId
+      ? addMonthsPreservingEndOfMonth(currentCycleStart, 1)
+      : currentCycleStart;
 
-    const { data: freshSub } = await supabase
-      .from("portal_subscriptions")
-      .select("call_minutes_used")
-      .eq("id", sub.id)
-      .single();
+    // Compute usage for the target cycle directly (don't use refreshOrgUsage
+    // because that always computes the CURRENT cycle).
+    const { data: calls } = await supabase
+      .from("portal_calls")
+      .select("duration_seconds")
+      .eq("org_id", sub.org_id)
+      .gte("started_at", targetCycleStart.toISOString())
+      .lt("started_at", targetCycleEnd.toISOString());
 
-    const used = freshSub?.call_minutes_used ?? 0;
+    const totalSeconds = (calls ?? []).reduce(
+      (acc: number, c: { duration_seconds: number | null }) =>
+        acc + (c.duration_seconds ?? 0),
+      0,
+    );
+    const used = Math.ceil(totalSeconds / 60);
+
     // deno-lint-ignore no-explicit-any
     const plan = (sub as any).portal_plans;
     if (!plan) continue;
@@ -442,7 +529,6 @@ async function closePeriod(req: Request, body: JsonBody): Promise<Response> {
 
     let invoiceItemId: string | null = null;
     if (overageCents > 0 && rate > 0) {
-      // Look up the org's stripe_customer_id
       const { data: org } = await supabase
         .from("portal_organizations")
         .select("stripe_customer_id")
@@ -459,8 +545,8 @@ async function closePeriod(req: Request, body: JsonBody): Promise<Response> {
             org_id: sub.org_id,
             plan_id: sub.plan_id ?? "",
             kind: "overage",
-            period_start: sub.current_period_start ?? "",
-            period_end: sub.current_period_end ?? "",
+            period_start: targetCycleStart.toISOString(),
+            period_end: targetCycleEnd.toISOString(),
           },
         });
         invoiceItemId = item.id ?? null;
@@ -485,7 +571,9 @@ async function closePeriod(req: Request, body: JsonBody): Promise<Response> {
 // issue-credit (super_admin only)
 // =============================================================================
 async function issueCredit(req: Request, body: JsonBody): Promise<Response> {
-  await requireSuperAdmin(req);
+  if (!hasWorkerSecret(req)) {
+    await requireSuperAdmin(req);
+  }
 
   const { orgId, amountCents, description } = body;
   if (!orgId || amountCents == null || !description) {

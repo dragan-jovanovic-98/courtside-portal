@@ -54,20 +54,32 @@ serve(async (req: Request) => {
   const supabase = getServiceClient();
 
   // ---------- IDEMPOTENCY ----------
-  // INSERT ... ON CONFLICT DO NOTHING. If the row already exists, the event was
-  // already processed — return 200 and do nothing.
-  const { data: logInserted } = await supabase
+  // Upsert the event into the log. If a previous run already marked it as
+  // processed (processed_at IS NOT NULL), short-circuit as duplicate.
+  // If it was previously logged but processing FAILED (processed_at IS NULL),
+  // re-run the handler — this is the Stripe retry path.
+  const { error: upsertErr } = await supabase
     .from("portal_stripe_event_log")
-    .insert({
-      id: event.id,
-      event_type: event.type,
-      payload: event as unknown as Record<string, unknown>,
-    })
-    .select("id")
-    .maybeSingle();
+    .upsert(
+      {
+        id: event.id,
+        event_type: event.type,
+        payload: event as unknown as Record<string, unknown>,
+      },
+      { onConflict: "id", ignoreDuplicates: false },
+    );
+  if (upsertErr) {
+    console.error("[portal-webhook] Failed to write event log:", upsertErr);
+    return jsonResponse({ error: upsertErr.message }, 500);
+  }
 
-  if (!logInserted) {
-    // Row already exists → duplicate event. Return 200.
+  const { data: existing } = await supabase
+    .from("portal_stripe_event_log")
+    .select("processed_at")
+    .eq("id", event.id)
+    .single();
+
+  if (existing?.processed_at) {
     return jsonResponse({ received: true, duplicate: true });
   }
 
@@ -151,10 +163,12 @@ async function handleSubscriptionUpsert(
   let planName: string | null = null;
   let priceMonthly: number | null = null;
 
+  let includedMinutes: number = 0;
+
   if (priceId) {
     const { data: plan } = await supabase
       .from("portal_plans")
-      .select("id, name, monthly_base_price_cents")
+      .select("id, name, monthly_base_price_cents, included_minutes")
       .eq("stripe_price_id", priceId)
       .maybeSingle();
 
@@ -164,6 +178,7 @@ async function handleSubscriptionUpsert(
       priceMonthly = plan.monthly_base_price_cents != null
         ? plan.monthly_base_price_cents / 100
         : null;
+      includedMinutes = plan.included_minutes ?? 0;
     } else {
       // No matching portal_plans row — shouldn't happen if plans were created via
       // portal-billing create-plan, but we fall back to price.unit_amount for display.
@@ -194,6 +209,7 @@ async function handleSubscriptionUpsert(
         stripe_subscription_id: sub.id,
         plan_name: planName,
         price_monthly: priceMonthly,
+        call_minutes_limit: includedMinutes,
         status: sub.status,
         current_period_start: tsFromUnix(currentPeriodStart),
         current_period_end: tsFromUnix(currentPeriodEnd),

@@ -18,10 +18,21 @@ export class AuthError extends Error {
   }
 }
 
+// CORS headers — portal-billing is called from the browser so we need these
+// on every response, including the OPTIONS preflight.
+export const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 export function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...CORS_HEADERS,
+    },
   });
 }
 
@@ -36,15 +47,7 @@ export function getServiceClient(): SupabaseClient {
   );
 }
 
-function getUserClient(jwt: string): SupabaseClient {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: `Bearer ${jwt}` } } },
-  );
-}
-
-function getJwt(req: Request): string | null {
+function getJwtFromRequest(req: Request): string | null {
   const auth = req.headers.get("Authorization") || req.headers.get("authorization");
   if (!auth) return null;
   const [scheme, token] = auth.split(" ");
@@ -52,18 +55,52 @@ function getJwt(req: Request): string | null {
   return token;
 }
 
+// System-level auth bypass for super-admin-only actions when invoked from
+// pg_cron via pg_net. Matches the same pattern portal-stripe-customer-worker
+// uses — the WORKER_SECRET env var is already set and mirrored in vault.
+export function hasWorkerSecret(req: Request): boolean {
+  const expected = Deno.env.get("WORKER_SECRET");
+  const provided = req.headers.get("x-worker-secret");
+  return !!expected && !!provided && provided === expected;
+}
+
+// Verify the JWT by calling Supabase's /auth/v1/user endpoint directly.
+// Returns the authenticated user's id or null on failure.
+//
+// Why this approach: the function is deployed with verify_jwt: false because
+// the Supabase Gateway's JWT verification does NOT handle the new ES256
+// asymmetric JWTs on this project. Doing our own verification via the auth
+// endpoint is version-independent and always trustworthy — Supabase Auth
+// fetches its own JWKS and verifies the signature there.
+async function verifyJwtAndGetUserId(jwt: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/auth/v1/user`,
+      {
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+          "apikey": Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        },
+      },
+    );
+    if (!res.ok) return null;
+    const user = await res.json();
+    return typeof user?.id === "string" ? user.id : null;
+  } catch (err) {
+    console.error("[auth] /auth/v1/user call failed:", err);
+    return null;
+  }
+}
+
 export async function requireOrgRole(
   req: Request,
   orgId: string,
   allowedRoles: PortalUserRole[],
 ): Promise<AuthContext> {
-  const jwt = getJwt(req);
-  if (!jwt) throw new AuthError("Not authenticated", 401);
-
-  const userClient = getUserClient(jwt);
-  const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) throw new AuthError("Invalid token", 401);
-  const authUserId = userRes.user.id;
+  const jwt = getJwtFromRequest(req);
+  if (!jwt) throw new AuthError("Not authenticated: missing bearer token", 401);
+  const authUserId = await verifyJwtAndGetUserId(jwt);
+  if (!authUserId) throw new AuthError("Not authenticated: JWT verification failed", 401);
 
   const serviceClient = getServiceClient();
   const { data: portalUser, error: puErr } = await serviceClient
@@ -108,21 +145,19 @@ export async function requireOrgRole(
 }
 
 export async function requireSuperAdmin(req: Request): Promise<string> {
-  const jwt = getJwt(req);
-  if (!jwt) throw new AuthError("Not authenticated", 401);
-
-  const userClient = getUserClient(jwt);
-  const { data: userRes, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userRes?.user) throw new AuthError("Invalid token", 401);
+  const jwt = getJwtFromRequest(req);
+  if (!jwt) throw new AuthError("Not authenticated: missing bearer token", 401);
+  const authUserId = await verifyJwtAndGetUserId(jwt);
+  if (!authUserId) throw new AuthError("Not authenticated: JWT verification failed", 401);
 
   const serviceClient = getServiceClient();
   const { data: superAdmin } = await serviceClient
     .from("portal_users")
     .select("id")
-    .eq("auth_id", userRes.user.id)
+    .eq("auth_id", authUserId)
     .eq("role", "super_admin")
     .maybeSingle();
 
   if (!superAdmin) throw new AuthError("Super admin required", 403);
-  return userRes.user.id;
+  return authUserId;
 }
