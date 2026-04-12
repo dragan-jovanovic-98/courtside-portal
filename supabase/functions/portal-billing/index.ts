@@ -64,6 +64,8 @@ serve(async (req: Request) => {
         return await createPortalSession(req, body);
       case "list-payment-methods":
         return await listPaymentMethods(req, body);
+      case "update-org-billing-info":
+        return await updateOrgBillingInfo(req, body);
       case "refresh-usage":
         return await refreshUsage(req, body);
       case "close-period":
@@ -172,7 +174,9 @@ async function activatePlanOnOrg(req: Request, body: JsonBody): Promise<Response
 
   const { data: org, error: orgErr } = await supabase
     .from("portal_organizations")
-    .select("id, stripe_customer_id")
+    .select(
+      "id, stripe_customer_id, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_postal_code, billing_country",
+    )
     .eq("id", orgId)
     .maybeSingle();
 
@@ -181,6 +185,19 @@ async function activatePlanOnOrg(req: Request, body: JsonBody): Promise<Response
     return errorResponse(
       "Org has no Stripe customer yet. Wait for the customer worker to run or invoke it manually.",
       409,
+    );
+  }
+
+  // Billing address is required before activation. Tax jurisdiction depends on it.
+  const missing: string[] = [];
+  if (!org.billing_address_line1) missing.push("line1");
+  if (!org.billing_city) missing.push("city");
+  if (!org.billing_postal_code) missing.push("postal_code");
+  if (!org.billing_country) missing.push("country");
+  if (missing.length > 0) {
+    return errorResponse(
+      `Billing address is incomplete. Missing: ${missing.join(", ")}. Set it on the org detail page before activating.`,
+      400,
     );
   }
 
@@ -195,6 +212,25 @@ async function activatePlanOnOrg(req: Request, body: JsonBody): Promise<Response
   if (!plan.stripe_price_id) {
     return errorResponse("Plan has no Stripe Price ID — re-create via create-plan", 500);
   }
+
+  // Push the latest billing address to the Stripe customer so Stripe Tax has
+  // the right jurisdiction on every activation. Portal is the source of truth.
+  await stripe.customers.update(org.stripe_customer_id, {
+    address: {
+      line1: org.billing_address_line1!,
+      line2: org.billing_address_line2 ?? undefined,
+      city: org.billing_city!,
+      state: org.billing_state ?? undefined,
+      postal_code: org.billing_postal_code!,
+      country: org.billing_country!,
+    },
+  });
+
+  // Tax policy: enabled for Canadian clients, disabled for everyone else.
+  // Stripe Tax must be enabled in the Stripe dashboard with CA jurisdictions
+  // registered — if it isn't, Stripe throws and the error propagates back
+  // to the admin UI so the admin knows to set it up.
+  const wantsTax = org.billing_country === "CA";
 
   // Step 1: Setup fee invoice (if applicable)
   let setupInvoiceId: string | null = null;
@@ -211,6 +247,7 @@ async function activatePlanOnOrg(req: Request, body: JsonBody): Promise<Response
       customer: org.stripe_customer_id,
       auto_advance: true,
       collection_method: "charge_automatically",
+      automatic_tax: { enabled: wantsTax },
       metadata: { org_id: orgId, plan_id: planId, kind: "setup_fee" },
     });
 
@@ -222,6 +259,7 @@ async function activatePlanOnOrg(req: Request, body: JsonBody): Promise<Response
     customer: org.stripe_customer_id,
     items: [{ price: plan.stripe_price_id }],
     collection_method: "charge_automatically",
+    automatic_tax: { enabled: wantsTax },
     metadata: { org_id: orgId, plan_id: planId },
   };
 
@@ -236,7 +274,66 @@ async function activatePlanOnOrg(req: Request, body: JsonBody): Promise<Response
     setupInvoiceId,
     subscriptionId: subscription.id,
     status: subscription.status,
+    taxEnabled: wantsTax,
   });
+}
+
+// =============================================================================
+// update-org-billing-info
+// =============================================================================
+async function updateOrgBillingInfo(req: Request, body: JsonBody): Promise<Response> {
+  const {
+    orgId,
+    billingAddressLine1,
+    billingAddressLine2,
+    billingCity,
+    billingState,
+    billingPostalCode,
+    billingCountry,
+  } = body;
+
+  if (!orgId) return errorResponse("Required: orgId");
+  if (!billingAddressLine1 || !billingCity || !billingPostalCode || !billingCountry) {
+    return errorResponse("Required: billingAddressLine1, billingCity, billingPostalCode, billingCountry");
+  }
+
+  await requireOrgRole(req, orgId, ["owner", "admin"]);
+
+  const supabase = getServiceClient();
+  const stripe = getStripe();
+
+  const { data: org, error } = await supabase
+    .from("portal_organizations")
+    .update({
+      billing_address_line1: billingAddressLine1,
+      billing_address_line2: billingAddressLine2 || null,
+      billing_city: billingCity,
+      billing_state: billingState || null,
+      billing_postal_code: billingPostalCode,
+      billing_country: billingCountry,
+    })
+    .eq("id", orgId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to update org: ${error.message}`);
+  if (!org) return errorResponse("Org not found", 404);
+
+  // Sync to Stripe customer if one exists — portal is the source of truth.
+  if (org.stripe_customer_id) {
+    await stripe.customers.update(org.stripe_customer_id, {
+      address: {
+        line1: billingAddressLine1,
+        line2: billingAddressLine2 || undefined,
+        city: billingCity,
+        state: billingState || undefined,
+        postal_code: billingPostalCode,
+        country: billingCountry,
+      },
+    });
+  }
+
+  return jsonResponse({ org });
 }
 
 // =============================================================================

@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BillingInfoForm } from "@/components/admin/billing-info-form";
 import type { Organization, Plan } from "@/lib/types";
 
 type PlanWithOrgName = Plan & { _orgName: string };
@@ -51,6 +52,11 @@ export function PlanForm({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<"create" | "create-activate" | null>(null);
+
+  const needsBillingInfo = !org.billing_address_line1
+    || !org.billing_city
+    || !org.billing_postal_code
+    || !org.billing_country;
 
   function update<K extends keyof PlanFormState>(key: K, value: PlanFormState[K]) {
     setState((s) => ({ ...s, [key]: value }));
@@ -193,6 +199,20 @@ export function PlanForm({
           created and linked.
         </p>
       </div>
+
+      {/* Billing info section — only shown if the org doesn't have one yet */}
+      {needsBillingInfo && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h2 className="text-[14px] font-semibold text-[#242529]">Billing address required</h2>
+          <p className="mt-1 text-[12px] text-[rgba(0,0,0,0.55)]">
+            This org doesn&apos;t have a billing address yet. Activation requires one.
+            Enter it here and save before creating the plan. Canadian addresses enable automatic sales tax.
+          </p>
+          <div className="mt-4">
+            <BillingInfoForm org={org} variant="inline" />
+          </div>
+        </div>
+      )}
 
       {/* Duplicate picker */}
       {existingPlans.length > 0 && (
@@ -361,11 +381,17 @@ export function PlanForm({
         <Button
           size="sm"
           onClick={() => handleSubmit(true)}
-          disabled={submitting !== null}
+          disabled={submitting !== null || needsBillingInfo}
+          title={needsBillingInfo ? "Save billing address first to enable activation" : undefined}
         >
           {submitting === "create-activate" ? "Creating & activating..." : "Create & activate"}
         </Button>
       </div>
+      {needsBillingInfo && (
+        <p className="mt-2 text-[12px] text-[rgba(0,0,0,0.55)]">
+          &ldquo;Create &amp; activate&rdquo; is disabled until the billing address is saved.
+        </p>
+      )}
     </div>
   );
 }

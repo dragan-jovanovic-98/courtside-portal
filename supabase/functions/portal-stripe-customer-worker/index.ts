@@ -85,7 +85,9 @@ serve(async (req: Request) => {
     try {
       const { data: org, error: orgErr } = await supabase
         .from("portal_organizations")
-        .select("id, name, primary_email, billing_email, stripe_customer_id")
+        .select(
+          "id, name, primary_email, billing_email, stripe_customer_id, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_postal_code, billing_country",
+        )
         .eq("id", row.org_id)
         .single();
 
@@ -125,9 +127,24 @@ serve(async (req: Request) => {
         );
       }
 
+      // Include the billing address if it's been set, so Stripe Tax can
+      // determine jurisdiction. Only emit the address field when line1 is
+      // populated — partial addresses would be worse than none.
+      const addressParam = org.billing_address_line1
+        ? {
+          line1: org.billing_address_line1,
+          line2: org.billing_address_line2 ?? undefined,
+          city: org.billing_city ?? undefined,
+          state: org.billing_state ?? undefined,
+          postal_code: org.billing_postal_code ?? undefined,
+          country: org.billing_country ?? undefined,
+        }
+        : undefined;
+
       const customer = await stripe.customers.create({
         email,
         name: org.name,
+        address: addressParam,
         metadata: { org_id: org.id },
       });
 

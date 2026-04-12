@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { ActivatePlanButton } from "@/components/admin/activate-plan-button";
+import { BillingInfoForm } from "@/components/admin/billing-info-form";
 import type { Organization, Plan, Subscription, Invoice } from "@/lib/types";
 
 const NON_TERMINAL = new Set(["active", "trialing", "past_due", "incomplete"]);
@@ -116,6 +117,9 @@ export function OrgDetail({
           </div>
         </dl>
       </section>
+
+      {/* Billing address */}
+      <BillingInfoForm org={org} />
 
       {/* Active subscription */}
       <section>
