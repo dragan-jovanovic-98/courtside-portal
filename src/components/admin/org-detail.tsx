@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { ActivatePlanButton } from "@/components/admin/activate-plan-button";
 import type { Organization, Plan, Subscription, Invoice } from "@/lib/types";
 
 const NON_TERMINAL = new Set(["active", "trialing", "past_due", "incomplete"]);
@@ -75,7 +75,7 @@ export function OrgDetail({
         </div>
         <Link
           href={`/admin/orgs/${org.id}/plans/new`}
-          className={buttonVariants({ size: "sm" }) + " gap-1.5"}
+          className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[12px] bg-[#242529] px-2.5 text-[13px] font-medium text-white transition-colors hover:bg-[#242529]/85"
         >
           <Plus className="h-3.5 w-3.5" />
           Create plan
@@ -180,31 +180,48 @@ export function OrgDetail({
                   <th className="px-3 py-2.5 font-medium">Overage</th>
                   <th className="px-3 py-2.5 font-medium">Setup fee</th>
                   <th className="px-3 py-2.5 font-medium">Created</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {plans.map((plan) => (
-                  <tr key={plan.id} className="border-t border-[#eeeff1]">
-                    <td className="px-3 py-2.5 font-medium text-[#242529]">{plan.name}</td>
-                    <td className="px-3 py-2.5 text-[#242529]">
-                      {formatCents(plan.monthly_base_price_cents, plan.currency)}
-                    </td>
-                    <td className="px-3 py-2.5 text-[#242529]">{plan.included_minutes}</td>
-                    <td className="px-3 py-2.5 text-[#242529]">
-                      {plan.overage_per_minute_cents
-                        ? `${formatCents(plan.overage_per_minute_cents, plan.currency)}/min`
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-2.5 text-[#242529]">
-                      {plan.setup_fee_cents
-                        ? `${formatCents(plan.setup_fee_cents, plan.currency)} · ${plan.setup_fee_covers_days}d`
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-2.5 text-[rgba(0,0,0,0.55)]">
-                      {formatDate(plan.created_at)}
-                    </td>
-                  </tr>
-                ))}
+                {plans.map((plan) => {
+                  const isCurrent = activeSub?.plan_id === plan.id;
+                  return (
+                    <tr key={plan.id} className="border-t border-[#eeeff1]">
+                      <td className="px-3 py-2.5 font-medium text-[#242529]">{plan.name}</td>
+                      <td className="px-3 py-2.5 text-[#242529]">
+                        {formatCents(plan.monthly_base_price_cents, plan.currency)}
+                      </td>
+                      <td className="px-3 py-2.5 text-[#242529]">{plan.included_minutes}</td>
+                      <td className="px-3 py-2.5 text-[#242529]">
+                        {plan.overage_per_minute_cents
+                          ? `${formatCents(plan.overage_per_minute_cents, plan.currency)}/min`
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-[#242529]">
+                        {plan.setup_fee_cents
+                          ? `${formatCents(plan.setup_fee_cents, plan.currency)} · ${plan.setup_fee_covers_days}d`
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-[rgba(0,0,0,0.55)]">
+                        {formatDate(plan.created_at)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {isCurrent ? (
+                          <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                            Current
+                          </span>
+                        ) : activeSub ? (
+                          <span className="text-[11px] text-[rgba(0,0,0,0.35)]">
+                            Another plan active
+                          </span>
+                        ) : (
+                          <ActivatePlanButton orgId={org.id} planId={plan.id} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
