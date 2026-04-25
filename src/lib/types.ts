@@ -2,8 +2,14 @@ export type PortalUserRole = "owner" | "admin" | "member" | "viewer" | "super_ad
 export type CallDirection = "inbound" | "outbound";
 export type CallStatus = "completed" | "missed" | "voicemail" | "abandoned" | "transferred";
 export type AgentStatus = "active" | "pending" | "inactive";
+export type AgentRole = "router" | "specialist" | "after_hours" | "general";
 export type BookingStatus = "scheduled" | "confirmed" | "cancelled" | "completed" | "no_show";
 export type Sentiment = "positive" | "neutral" | "negative";
+export type IntentType = "sales" | "service" | "commercial" | "claim" | "wrong_number" | "other";
+export type LineOfBusiness = "auto" | "home" | "life" | "health" | "commercial" | "specialty" | "unknown";
+export type AnalysisStatus = "pending" | "processing" | "done" | "failed" | "skipped";
+export type CommitmentType = "callback" | "appointment" | "transfer" | "confirmation";
+export type CommitmentStatus = "pending" | "delivered" | "kept" | "missed" | "cancelled";
 
 export interface Organization {
   id: string;
@@ -29,6 +35,8 @@ export interface Organization {
   billing_state: string | null;
   billing_postal_code: string | null;
   billing_country: string | null;
+  default_recording_disclosure_id: string | null;
+  broker_notification_rule: BrokerNotificationRule;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +73,14 @@ export interface Agent {
   direction: CallDirection;
   status: AgentStatus;
   phone_number_id: string | null;
+  /** @deprecated Phase C migrates to Retell. Future cleanup migration drops this column. */
   livekit_agent_id: string | null;
+  retell_agent_id: string | null;
+  role: AgentRole;
+  intake_schema: IntakeSchema;
+  analysis_function_name: string;
+  active_hours: ActiveHours | null;
+  recording_disclosure_id: string | null;
   llm_provider: string;
   llm_model: string;
   voice_id: string | null;
@@ -82,10 +97,32 @@ export interface Agent {
   updated_at: string;
 }
 
+/**
+ * Per-agent intake schema. Drives the post-call analyzer's structured-extraction prompt.
+ * V1 shape: a list of fields the analyzer should attempt to extract from the transcript
+ * (when not already captured by a tool call).
+ */
+export interface IntakeSchema {
+  fields?: Array<{
+    field_name: string;
+    field_type: "string" | "number" | "boolean" | "date" | "phone" | "email";
+    required?: boolean;
+    description?: string;
+  }>;
+}
+
+/**
+ * Per-agent active hours. Used to gate routing (router → after_hours agent at night, etc.).
+ * Reuses the same shape as portal_organizations.business_hours.
+ */
+export type ActiveHours = BusinessHours;
+
 export interface PhoneNumber {
   id: string;
   org_id: string;
   twilio_sid: string | null;
+  retell_phone_id: string | null;
+  owned_by_court_side: boolean;
   number: string;
   friendly_name: string | null;
   type: string;
@@ -115,8 +152,11 @@ export interface Call {
   direction: CallDirection;
   status: CallStatus;
   outcome_category_id: string | null;
+  intent_type: IntentType | null;
+  line_of_business: LineOfBusiness | null;
   caller_number: string | null;
   caller_name: string | null;
+  to_number: string | null;
   started_at: string;
   ended_at: string | null;
   duration_seconds: number | null;
@@ -130,16 +170,50 @@ export interface Call {
   transcript: TranscriptEntry[] | null;
   transcript_text: string | null;
   recording_url: string | null;
+  recording_multi_channel_url: string | null;
+  public_log_url: string | null;
+  knowledge_base_retrieved_url: string | null;
   livekit_room_id: string | null;
   twilio_call_sid: string | null;
   latency_avg_ms: number | null;
+  latency_metrics: RetellLatencyMetrics | null;
   metadata: Record<string, unknown>;
+  // Phase C: analysis state
+  analysis_status: AnalysisStatus;
+  analysis_attempted_at: string | null;
+  analysis_error: string | null;
+  analysis_retry_count: number;
+  // Phase C: Retell identifiers
+  retell_call_id: string | null;
+  retell_agent_version: number | null;
+  retell_agent_name: string | null;
+  disconnection_reason: string | null;
+  retell_dynamic_variables: Record<string, unknown> | null;
+  retell_collected_variables: Record<string, unknown> | null;
+  // Phase C: Retell's own call_analysis baseline
+  retell_call_summary: string | null;
+  retell_user_sentiment: string | null;
+  retell_call_successful: boolean | null;
+  retell_in_voicemail: boolean | null;
+  retell_custom_analysis_data: Record<string, unknown> | null;
+  // Phase C: tool calls
+  tool_calls: RetellToolCall[] | null;
+  tool_call_count: number;
+  // Phase C: cost tracking
+  retell_cost_cents: number | null;
+  retell_cost_breakdown: RetellCallCost["product_costs"] | null;
+  analysis_cost_cents: number | null;
+  analysis_token_usage: { prompt: number; completion: number; model: string } | null;
+  // Phase C: disclosure
+  recording_disclosure_id: string | null;
   created_at: string;
   // Joined fields
   agent?: Agent;
   outcome_category?: OutcomeCategory;
   contact?: Contact;
   actions?: CallAction[];
+  commitments?: Commitment[];
+  recording_disclosure?: RecordingDisclosure;
 }
 
 export interface TranscriptEntry {
@@ -168,6 +242,7 @@ export interface Contact {
   last_name: string | null;
   email: string | null;
   first_call_id: string | null;
+  assigned_broker_id: string | null;
   total_calls: number;
   last_call_at: string | null;
   metadata: Record<string, unknown>;
@@ -263,4 +338,162 @@ export interface Referral {
   referred_org_id: string | null;
   status: "pending" | "signed_up" | "rewarded";
   created_at: string;
+}
+
+// ============================================================
+// Phase C — Commitments, recording disclosures, calendar groups
+// ============================================================
+
+export interface Commitment {
+  id: string;
+  org_id: string;
+  call_id: string | null;
+  retell_call_id: string | null;
+  broker_id: string | null;
+  contact_id: string | null;
+  type: CommitmentType;
+  scheduled_for: string | null;
+  callback_window_start: string | null;
+  callback_window_end: string | null;
+  commitment_text: string;
+  intake_summary: string | null;
+  intake_data: Record<string, unknown> | null;
+  status: CommitmentStatus;
+  delivery_log: CommitmentDeliveryLogEntry[];
+  created_via_tool: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  call?: Call;
+  contact?: Contact;
+  broker?: PortalUser;
+}
+
+export interface CommitmentDeliveryLogEntry {
+  channel: "email" | "sms_to_caller" | "sms_to_broker" | "calendar_gcal" | "calendar_outlook" | "portal_queue";
+  status: "pending" | "sent" | "success" | "failed" | "skipped";
+  recipient?: string;
+  reason?: string;
+  attempted_at: string;
+  message_id?: string;
+  error?: string;
+}
+
+export interface RecordingDisclosure {
+  id: string;
+  jurisdiction: string;
+  language: string;
+  body_text: string;
+  version: number;
+  is_default: boolean;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CalendarGroup {
+  id: string;
+  org_id: string;
+  name: string;
+  routing_strategy: "round_robin" | "content_match" | "priority";
+  config: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface CalendarGroupMembership {
+  id: string;
+  group_id: string;
+  calendar_connection_id: string;
+  priority: number | null;
+  created_at: string;
+}
+
+/**
+ * Stored under portal_notification_preferences.preferences for each portal_user.
+ * Drives whether the broker receives email/SMS/portal/calendar deliveries on commitments.
+ */
+export interface BrokerNotificationPreferences {
+  commitment_email: boolean;
+  commitment_portal: boolean;
+  commitment_sms: boolean;
+  commitment_calendar: boolean;
+}
+
+/**
+ * Stored on portal_organizations.broker_notification_rule.
+ * `subscribe_to`: which events trigger notifications to the org-level subscribers.
+ * `subscriber_user_ids`: portal_users.id list — typically brokerage owner(s) / managers
+ * who want copies of every-call or commitment-only notifications regardless of
+ * which broker was assigned.
+ */
+export interface BrokerNotificationRule {
+  subscribe_to: "every_call" | "commitment_only" | { intent_types: IntentType[] };
+  subscriber_user_ids: string[];
+}
+
+// ============================================================
+// Phase C — Retell webhook payload shapes
+// ============================================================
+
+export interface RetellToolCall {
+  tool_call_id: string;
+  name: string;
+  type: string;
+  start_time_sec?: number;
+  arguments?: string;
+}
+
+export interface RetellCallCost {
+  product_costs: Array<{
+    product: string;
+    unit_price?: number;
+    cost: number;
+  }>;
+  total_duration_seconds?: number;
+  total_duration_unit_price?: number;
+  combined_cost: number;
+}
+
+export interface RetellLatencyBucket {
+  p50?: number;
+  p90?: number;
+  p95?: number;
+  p99?: number;
+  min?: number;
+  max?: number;
+  num?: number;
+  sum?: number;
+  values?: number[];
+}
+
+export interface RetellLatencyMetrics {
+  llm?: RetellLatencyBucket;
+  e2e?: RetellLatencyBucket;
+  tts?: RetellLatencyBucket;
+  knowledge_base?: RetellLatencyBucket;
+  asr?: RetellLatencyBucket;
+}
+
+export interface RetellCallAnalysis {
+  call_summary: string | null;
+  in_voicemail: boolean | null;
+  user_sentiment: string | null;
+  call_successful: boolean | null;
+  custom_analysis_data: Record<string, unknown> | null;
+}
+
+// ============================================================
+// Phase C — Call analysis attempt log
+// ============================================================
+
+export interface CallAnalysisAttempt {
+  id: string;
+  call_id: string;
+  status: AnalysisStatus;
+  started_at: string;
+  completed_at: string | null;
+  error: string | null;
+  prompt_token_count: number | null;
+  completion_token_count: number | null;
+  model: string | null;
 }
