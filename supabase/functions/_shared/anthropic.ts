@@ -1,10 +1,12 @@
 // Anthropic client + structured-output helper for Phase C post-call analysis.
 //
-// Default model: claude-sonnet-4-6. Structured output via tool-use enforced
-// schema — Claude is asked to call a single tool whose input matches the schema.
+// Default model: claude-haiku-4-5. Plenty for classification + structured
+// extraction over short transcripts — Sonnet is overkill for this task.
+// Per-call cost: ~$0.006 vs Sonnet's ~$0.018. Per-agent override available
+// via portal_agents.analysis_function_name (point at a heavier-model variant).
 
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
 export interface ClaudeUsage {
   input_tokens: number;
@@ -96,19 +98,20 @@ export async function callClaudeWithStructuredOutput<T>({
 }
 
 /**
- * Approximate Claude Sonnet 4.6 cost in cents.
- * As of 2026-04 pricing: $3/M input tokens, $15/M output tokens.
+ * Approximate Claude cost in cents based on model + token usage.
+ * Pricing as of 2026-04:
+ *   Haiku 4.5  : $1   input  / $5    output  per 1M tokens
+ *   Sonnet 4.6 : $3   input  / $15   output  per 1M tokens
+ *   Opus 4.7   : $15  input  / $75   output  per 1M tokens
  * Returns cost in cents (numeric, retain decimals).
  */
 export function estimateClaudeCostCents(usage: ClaudeUsage, model: string = DEFAULT_MODEL): number {
-  // Sonnet 4.6 pricing (default). Adjust if other models are used.
-  const inputPerMillion = 3.0;
-  const outputPerMillion = 15.0;
   if (model.includes("haiku")) {
     return (usage.input_tokens * 1.0 + usage.output_tokens * 5.0) / 1_000_000 * 100;
   }
   if (model.includes("opus")) {
     return (usage.input_tokens * 15.0 + usage.output_tokens * 75.0) / 1_000_000 * 100;
   }
-  return (usage.input_tokens * inputPerMillion + usage.output_tokens * outputPerMillion) / 1_000_000 * 100;
+  // Sonnet (default) and other unrecognized models
+  return (usage.input_tokens * 3.0 + usage.output_tokens * 15.0) / 1_000_000 * 100;
 }

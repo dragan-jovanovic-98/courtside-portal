@@ -164,7 +164,7 @@ async function analyze(callId: string, force: boolean): Promise<Response> {
 
   const { data: attempt } = await supabase
     .from("portal_call_analysis_attempts")
-    .insert({ call_id: callId, status: "processing", model: "claude-sonnet-4-6" })
+    .insert({ call_id: callId, status: "processing", model: "claude-haiku-4-5-20251001" })
     .select("id")
     .single();
 
@@ -262,7 +262,7 @@ ${call.transcript_text}`;
     analysis_attempted_at: new Date().toISOString(),
     analysis_error: null,
     analysis_cost_cents: costCents,
-    analysis_token_usage: { prompt: usage.input_tokens, completion: usage.output_tokens, model: "claude-sonnet-4-6" },
+    analysis_token_usage: { prompt: usage.input_tokens, completion: usage.output_tokens, model: "claude-haiku-4-5-20251001" },
     intent_type: analyzerOutput.intent_type,
     line_of_business: analyzerOutput.line_of_business,
     sentiment: analyzerOutput.refined_sentiment,
