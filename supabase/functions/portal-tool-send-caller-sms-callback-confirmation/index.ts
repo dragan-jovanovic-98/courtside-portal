@@ -20,6 +20,10 @@ interface SendCallbackSmsBody {
   retell_call_id: string;
   retell_agent_id: string;
   caller_phone: string;
+  /** Required. The Twilio number to send FROM. Configured per agent in Retell — typically the
+   * brokerage's Court-Side-provisioned inbound number (so the caller sees the same number they
+   * just dialed) or a brokerage-owned outbound number. NOT a global env-var default. */
+  from_number: string;
   message_body: string;
   commitment_id?: string;
 }
@@ -31,8 +35,8 @@ serve(async (req: Request) => {
   let body: SendCallbackSmsBody;
   try { body = await req.json(); } catch { return errorResponse("Invalid JSON body"); }
 
-  if (!body.retell_call_id || !body.retell_agent_id || !body.caller_phone || !body.message_body) {
-    return errorResponse("Missing required fields: retell_call_id, retell_agent_id, caller_phone, message_body");
+  if (!body.retell_call_id || !body.retell_agent_id || !body.caller_phone || !body.from_number || !body.message_body) {
+    return errorResponse("Missing required fields: retell_call_id, retell_agent_id, caller_phone, from_number, message_body");
   }
 
   const supabase = getServiceClient();
@@ -47,7 +51,7 @@ serve(async (req: Request) => {
 
   let smsResult;
   try {
-    smsResult = await sendSms({ to: body.caller_phone, body: body.message_body });
+    smsResult = await sendSms({ to: body.caller_phone, body: body.message_body, fromNumber: body.from_number });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[send_caller_sms_callback_confirmation] Twilio error:", message);
