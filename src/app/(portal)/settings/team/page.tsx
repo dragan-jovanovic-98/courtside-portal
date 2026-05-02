@@ -33,6 +33,7 @@ import {
 import { MoreHorizontal, X, Clock } from "lucide-react";
 import { formatDate } from "@/lib/date";
 import { inviteTeamMember, cancelInvitation, updateMemberRole, removeMember } from "./actions";
+import { hasAdminPrivileges, hasOwnerPrivileges } from "@/lib/permissions";
 import type { PortalUser } from "@/lib/types";
 
 interface Invitation {
@@ -46,8 +47,8 @@ interface Invitation {
 
 export default function TeamSettingsPage() {
   const { organization, user } = useOrganization();
-  const isOwner = user.role === "owner";
-  const isAdmin = user.role === "admin" || isOwner;
+  const isOwner = hasOwnerPrivileges(user.role);
+  const isAdmin = hasAdminPrivileges(user.role);
 
   const [members, setMembers] = useState<PortalUser[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");

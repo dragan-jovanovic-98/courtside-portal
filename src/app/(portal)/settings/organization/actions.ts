@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { OutcomeCategory } from "@/lib/types";
+import { hasAdminPrivileges } from "@/lib/permissions";
+import type { OutcomeCategory, PortalUserRole } from "@/lib/types";
 
 export interface OutcomeCategoryInput {
   id: string | null;
@@ -37,7 +38,7 @@ async function requireOrgAdmin(orgId: string): Promise<Auth> {
     .eq("org_id", orgId)
     .single();
 
-  if (!caller || (caller.role !== "owner" && caller.role !== "admin")) {
+  if (!caller || !hasAdminPrivileges(caller.role as PortalUserRole)) {
     return { ok: false, error: "Permission denied" };
   }
   return { ok: true, supabase };

@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { hasAdminPrivileges } from "@/lib/permissions";
+import type { PortalUserRole } from "@/lib/types";
 
 export async function inviteTeamMember(params: {
   email: string;
@@ -24,7 +26,7 @@ export async function inviteTeamMember(params: {
     .eq("org_id", params.orgId)
     .single();
 
-  if (!caller || (caller.role !== "owner" && caller.role !== "admin")) {
+  if (!caller || !hasAdminPrivileges(caller.role as PortalUserRole)) {
     return { error: "Permission denied" };
   }
 
@@ -117,7 +119,7 @@ export async function cancelInvitation(params: {
     .eq("org_id", params.orgId)
     .single();
 
-  if (!caller || (caller.role !== "owner" && caller.role !== "admin")) {
+  if (!caller || !hasAdminPrivileges(caller.role as PortalUserRole)) {
     return { error: "Permission denied" };
   }
 
@@ -152,7 +154,7 @@ export async function updateMemberRole(params: {
     .eq("org_id", params.orgId)
     .single();
 
-  if (!caller || (caller.role !== "owner" && caller.role !== "admin")) {
+  if (!caller || !hasAdminPrivileges(caller.role as PortalUserRole)) {
     return { error: "Permission denied" };
   }
 
@@ -199,7 +201,7 @@ export async function removeMember(params: {
     .eq("org_id", params.orgId)
     .single();
 
-  if (!caller || (caller.role !== "owner" && caller.role !== "admin")) {
+  if (!caller || !hasAdminPrivileges(caller.role as PortalUserRole)) {
     return { error: "Permission denied" };
   }
 

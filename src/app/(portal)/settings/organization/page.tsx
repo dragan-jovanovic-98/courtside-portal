@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { INDUSTRIES, OUTCOME_COLOR_PRESETS, getOutcomeColor } from "@/lib/constants";
+import { hasAdminPrivileges } from "@/lib/permissions";
 import {
   ResponsiveDialog as Dialog,
   ResponsiveDialogContent as DialogContent,
@@ -53,7 +54,7 @@ const TIMEZONES = [
 export default function OrganizationSettingsPage() {
   const router = useRouter();
   const { organization, user } = useOrganization();
-  const canEdit = user.role === "owner" || user.role === "admin";
+  const canEdit = hasAdminPrivileges(user.role);
 
   const [name, setName] = useState(organization.name);
   const [industry, setIndustry] = useState(organization.industry || "");

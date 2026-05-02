@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Bot, ChevronDown, ChevronRight, Phone, CalendarCheck } from "lucide-react";
+import { hasAdminPrivileges } from "@/lib/permissions";
 import type { Agent } from "@/lib/types";
 
 const AGENT_TYPES = [
@@ -29,7 +30,7 @@ const AGENT_TYPES = [
 
 export default function AgentsSettingsPage() {
   const { organization, user } = useOrganization();
-  const isAdmin = user.role === "owner" || user.role === "admin";
+  const isAdmin = hasAdminPrivileges(user.role);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

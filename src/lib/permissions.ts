@@ -81,6 +81,14 @@ export function canAccessSettingsTab(role: PortalUserRole, tab: SettingsTab): bo
   return ROLE_PERMISSIONS[role].settingsTabs.includes(tab);
 }
 
+export function hasOwnerPrivileges(role: PortalUserRole): boolean {
+  return role === "owner" || role === "super_admin";
+}
+
+export function hasAdminPrivileges(role: PortalUserRole): boolean {
+  return role === "owner" || role === "admin" || role === "super_admin";
+}
+
 // Map of sidebar href segments to Page keys
 const PAGE_BY_HREF: Record<string, Page> = {
   "/dashboard": "dashboard",

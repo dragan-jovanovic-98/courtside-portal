@@ -6,6 +6,7 @@ import { useOrganization } from "@/components/providers/org-provider";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ShieldCheck, ArrowRight } from "lucide-react";
+import { hasAdminPrivileges } from "@/lib/permissions";
 
 interface ComplianceToggle {
   key: string;
@@ -17,7 +18,7 @@ interface ComplianceToggle {
 
 export default function ComplianceSettingsPage() {
   const { organization, user } = useOrganization();
-  const canEdit = user.role === "owner" || user.role === "admin";
+  const canEdit = hasAdminPrivileges(user.role);
 
   // SMS compliance
   const [autoSmsStop, setAutoSmsStop] = useState(true);
