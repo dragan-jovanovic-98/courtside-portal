@@ -5,8 +5,18 @@
 // resolves agent → org_id, INSERTs portal_calls with the full Retell payload (transcript,
 // tool_calls, costs, latency, recording URLs, baseline call_analysis), reconciles any
 // portal_commitments rows that were created during the call by tool endpoints (linking
-// call_id via retell_call_id), then invokes the post-call analyzer (function name from
-// portal_agents.analysis_function_name; defaults to portal-post-call-analysis).
+// call_id via retell_call_id), then forwards the enriched envelope to the per-agent n8n
+// webhook URL stored in portal_agents.post_call_webhook_url.
+//
+// If post_call_webhook_url IS NULL, marks the call analysis_status='skipped' and returns —
+// no forward. The forward POST sends the original Retell payload + a `context` object
+// containing the resolved org_id, agent_id, portal_call_id, and recording_disclosure_id.
+// A shared secret (PORTAL_FORWARD_SECRET env var) is sent in the x-courtside-secret
+// header; n8n workflows can optionally verify it.
+//
+// Architecture: data-vs-behavior split (2026-05-02). Supabase owns ingestion + agnostic
+// triggers; n8n owns per-agent LLM analysis + notifications + write-back to portal_calls.
+// See context/architecture.md and reference/client-onboarding-runbook.md.
 //
 // verify_jwt: false. Custom auth via Retell signature verification.
 
@@ -100,7 +110,7 @@ serve(async (req: Request) => {
   // Resolve org_id from the agent registration.
   const { data: agent } = await supabase
     .from("portal_agents")
-    .select("id, org_id, analysis_function_name, recording_disclosure_id")
+    .select("id, org_id, post_call_webhook_url, recording_disclosure_id")
     .eq("retell_agent_id", call.agent_id)
     .maybeSingle();
 
@@ -203,32 +213,55 @@ serve(async (req: Request) => {
     .update({ processed_at: new Date().toISOString() })
     .eq("id", call.call_id);
 
-  // Invoke analyzer if not skipped. Determined by the agent's analysis_function_name
-  // (defaults to portal-post-call-analysis); future per-client variants can set a
-  // different name without changing this handler.
+  // Forward enriched envelope to per-agent n8n webhook URL.
+  // Under the 2026-05-02 data-vs-behavior split, n8n owns LLM analysis + notifications +
+  // write-back to portal_calls. If post_call_webhook_url IS NULL, mark the call
+  // analysis_status='skipped' (no forward). Otherwise POST the envelope and let n8n
+  // handle the rest.
   if (analysisStatus === "pending") {
-    const analyzerName = agent.analysis_function_name || "portal-post-call-analysis";
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const workerSecret = Deno.env.get("WORKER_SECRET")!;
-    try {
-      const analyzerRes = await fetch(`${supabaseUrl}/functions/v1/${analyzerName}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-worker-secret": workerSecret,
+    const forwardUrl = agent.post_call_webhook_url;
+
+    if (!forwardUrl) {
+      console.warn(
+        `[portal-retell-webhook] Agent ${agent.id} has no post_call_webhook_url — skipping forward.`,
+      );
+      await supabase
+        .from("portal_calls")
+        .update({ analysis_status: "skipped" })
+        .eq("id", insertedCall.id);
+    } else {
+      const forwardSecret = Deno.env.get("PORTAL_FORWARD_SECRET");
+      const enrichedEnvelope = {
+        envelope_version: "1.0",
+        event: envelope.event,
+        call: envelope.call, // full original Retell payload
+        context: {
+          org_id: agent.org_id,
+          agent_id: agent.id,
+          portal_call_id: insertedCall.id,
+          recording_disclosure_id: recordingDisclosureId,
         },
-        body: JSON.stringify({ action: "analyze", call_id: insertedCall.id }),
-      });
-      if (!analyzerRes.ok) {
-        const text = await analyzerRes.text();
-        console.error(
-          `[portal-retell-webhook] Analyzer (${analyzerName}) returned ${analyzerRes.status}: ${text}`,
-        );
-        // Non-fatal — analysis_status remains 'pending' and the retry cron will pick it up.
+      };
+      try {
+        const forwardRes = await fetch(forwardUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(forwardSecret ? { "x-courtside-secret": forwardSecret } : {}),
+          },
+          body: JSON.stringify(enrichedEnvelope),
+        });
+        if (!forwardRes.ok) {
+          const text = await forwardRes.text();
+          console.error(
+            `[portal-retell-webhook] Forward to ${forwardUrl} returned ${forwardRes.status}: ${text}`,
+          );
+          // Non-fatal — analysis_status remains 'pending'; n8n can be retried manually.
+        }
+      } catch (err) {
+        console.error(`[portal-retell-webhook] Forward to ${forwardUrl} failed:`, err);
+        // Non-fatal — analysis_status remains 'pending'.
       }
-    } catch (err) {
-      console.error("[portal-retell-webhook] Analyzer invocation failed:", err);
-      // Non-fatal — retry cron handles it.
     }
   }
 

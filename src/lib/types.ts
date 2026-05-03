@@ -78,7 +78,7 @@ export interface Agent {
   retell_agent_id: string | null;
   role: AgentRole;
   intake_schema: IntakeSchema;
-  analysis_function_name: string;
+  post_call_webhook_url: string | null;
   active_hours: ActiveHours | null;
   recording_disclosure_id: string | null;
   llm_provider: string;

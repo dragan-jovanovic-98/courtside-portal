@@ -1,9 +1,15 @@
-// Anthropic client + structured-output helper for Phase C post-call analysis.
+// Anthropic client + structured-output helper.
+//
+// Originally built for the Phase C shared post-call analyzer (portal-post-call-analysis).
+// Under the 2026-05-02 data-vs-behavior split, that analyzer is deployed but idle —
+// per-agent post-call analysis lives in n8n (see context/architecture.md). This helper
+// stays here as future-context: if a client ever needs Supabase-side LLM extraction
+// (data residency, latency floor, or n8n escape hatch), portal_agents.post_call_webhook_url
+// can point at a Supabase function that uses this client. Otherwise it's unused.
 //
 // Default model: claude-haiku-4-5. Plenty for classification + structured
 // extraction over short transcripts — Sonnet is overkill for this task.
-// Per-call cost: ~$0.006 vs Sonnet's ~$0.018. Per-agent override available
-// via portal_agents.analysis_function_name (point at a heavier-model variant).
+// Per-call cost: ~$0.006 vs Sonnet's ~$0.018.
 
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
