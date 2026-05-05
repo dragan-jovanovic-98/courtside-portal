@@ -1,7 +1,12 @@
 // Retell client + signature verification + payload types.
 //
 // Webhook signature format per Retell docs: x-retell-signature: v=<unix_ts_ms>,d=<hex_hmac>
-// The HMAC is computed over `${timestamp}.${body}` using the webhook secret.
+// HMAC-SHA256 is computed over `${rawBody}${timestamp}` (body concatenated with
+// timestamp, body first, no separator) using the Retell API key with the webhook
+// badge as the signing key. There is no separate "webhook secret"; the same API
+// key value powers signing on Retell's side and outbound API calls (Bearer auth)
+// on ours. We store it as RETELL_WEBHOOK_SECRET in Supabase secrets for verify,
+// and as RETELL_API_KEY for outbound calls — the values may match.
 
 const RETELL_BASE_URL = "https://api.retellai.com";
 
@@ -37,9 +42,10 @@ export async function retellFetch<T = unknown>(
  * Verify a Retell webhook signature.
  *
  * Headers carry: `x-retell-signature: v=<unix_ts_ms>,d=<hex_hmac>`
- * The HMAC-SHA256 is computed over `${timestamp}.${rawBody}` using the
- * RETELL_WEBHOOK_SECRET. We also require the timestamp to be recent (within
- * 5 minutes) to prevent replay attacks.
+ * The HMAC-SHA256 is computed over `${rawBody}${timestamp}` (body first, then
+ * timestamp, no separator — per Retell docs) using the Retell API key with
+ * webhook badge as the signing key. Timestamp must be within 5 minutes of now
+ * to prevent replay attacks.
  *
  * Returns true if the signature is valid; false otherwise.
  */
@@ -72,7 +78,7 @@ export async function verifyRetellSignature(
   const signedBytes = await crypto.subtle.sign(
     "HMAC",
     key,
-    enc.encode(`${ts}.${rawBody}`),
+    enc.encode(`${rawBody}${ts}`),
   );
   const expectedHex = Array.from(new Uint8Array(signedBytes))
     .map((b) => b.toString(16).padStart(2, "0"))

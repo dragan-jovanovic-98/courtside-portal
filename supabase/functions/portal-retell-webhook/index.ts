@@ -135,9 +135,13 @@ serve(async (req: Request) => {
     recordingDisclosureId = org?.default_recording_disclosure_id ?? null;
   }
 
-  // Short-circuit very short calls (< 30s typically a hangup or test).
+  // Every call enters the analysis pipeline as 'pending'. n8n flips it to 'done'
+  // (or 'failed') after running. The only path that produces 'skipped' is a
+  // missing post_call_webhook_url — see the forward block below. Even very
+  // short calls go through: brokers want a notification for every inbound,
+  // including hangups, since "someone called and dropped" is still actionable.
   const durationSeconds = Math.round(call.duration_ms / 1000);
-  const analysisStatus = call.duration_ms < 30000 ? "skipped" : "pending";
+  let analysisStatus: "pending" | "skipped" = "pending";
 
   const callRow = {
     org_id: agent.org_id,
@@ -214,54 +218,53 @@ serve(async (req: Request) => {
     .eq("id", call.call_id);
 
   // Forward enriched envelope to per-agent n8n webhook URL.
-  // Under the 2026-05-02 data-vs-behavior split, n8n owns LLM analysis + notifications +
-  // write-back to portal_calls. If post_call_webhook_url IS NULL, mark the call
-  // analysis_status='skipped' (no forward). Otherwise POST the envelope and let n8n
-  // handle the rest.
-  if (analysisStatus === "pending") {
-    const forwardUrl = agent.post_call_webhook_url;
+  // Under the 2026-05-02 data-vs-behavior split, n8n owns LLM analysis +
+  // notifications + write-back to portal_calls. If post_call_webhook_url IS NULL,
+  // mark analysis_status='skipped' (no forward — agent isn't wired to n8n yet).
+  // Otherwise POST the envelope and let n8n handle the rest.
+  const forwardUrl = agent.post_call_webhook_url;
 
-    if (!forwardUrl) {
-      console.warn(
-        `[portal-retell-webhook] Agent ${agent.id} has no post_call_webhook_url — skipping forward.`,
-      );
-      await supabase
-        .from("portal_calls")
-        .update({ analysis_status: "skipped" })
-        .eq("id", insertedCall.id);
-    } else {
-      const forwardSecret = Deno.env.get("PORTAL_FORWARD_SECRET");
-      const enrichedEnvelope = {
-        envelope_version: "1.0",
-        event: envelope.event,
-        call: envelope.call, // full original Retell payload
-        context: {
-          org_id: agent.org_id,
-          agent_id: agent.id,
-          portal_call_id: insertedCall.id,
-          recording_disclosure_id: recordingDisclosureId,
+  if (!forwardUrl) {
+    console.warn(
+      `[portal-retell-webhook] Agent ${agent.id} has no post_call_webhook_url — skipping forward.`,
+    );
+    analysisStatus = "skipped";
+    await supabase
+      .from("portal_calls")
+      .update({ analysis_status: "skipped" })
+      .eq("id", insertedCall.id);
+  } else {
+    const forwardSecret = Deno.env.get("PORTAL_FORWARD_SECRET");
+    const enrichedEnvelope = {
+      envelope_version: "1.0",
+      event: envelope.event,
+      call: envelope.call, // full original Retell payload
+      context: {
+        org_id: agent.org_id,
+        agent_id: agent.id,
+        portal_call_id: insertedCall.id,
+        recording_disclosure_id: recordingDisclosureId,
+      },
+    };
+    try {
+      const forwardRes = await fetch(forwardUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(forwardSecret ? { "x-courtside-secret": forwardSecret } : {}),
         },
-      };
-      try {
-        const forwardRes = await fetch(forwardUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(forwardSecret ? { "x-courtside-secret": forwardSecret } : {}),
-          },
-          body: JSON.stringify(enrichedEnvelope),
-        });
-        if (!forwardRes.ok) {
-          const text = await forwardRes.text();
-          console.error(
-            `[portal-retell-webhook] Forward to ${forwardUrl} returned ${forwardRes.status}: ${text}`,
-          );
-          // Non-fatal — analysis_status remains 'pending'; n8n can be retried manually.
-        }
-      } catch (err) {
-        console.error(`[portal-retell-webhook] Forward to ${forwardUrl} failed:`, err);
-        // Non-fatal — analysis_status remains 'pending'.
+        body: JSON.stringify(enrichedEnvelope),
+      });
+      if (!forwardRes.ok) {
+        const text = await forwardRes.text();
+        console.error(
+          `[portal-retell-webhook] Forward to ${forwardUrl} returned ${forwardRes.status}: ${text}`,
+        );
+        // Non-fatal — analysis_status remains 'pending'; n8n can be retried manually.
       }
+    } catch (err) {
+      console.error(`[portal-retell-webhook] Forward to ${forwardUrl} failed:`, err);
+      // Non-fatal — analysis_status remains 'pending'.
     }
   }
 
